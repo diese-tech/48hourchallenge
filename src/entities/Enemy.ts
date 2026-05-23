@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { EVENTS } from '../constants';
+import { AUDIO, EVENTS } from '../constants';
 import EventBus from '../events';
 
 export interface EnemyConfig {
@@ -49,6 +49,16 @@ export default class Enemy extends Phaser.GameObjects.Container {
     this.updateHpBar();
   }
 
+  applyNightModifiers(speedMultiplier: number, tint: number) {
+    this.config = {
+      ...this.config,
+      color: tint,
+      speed: Math.round(this.config.speed * speedMultiplier),
+    };
+    this.drawShape();
+    this.updateHpBar();
+  }
+
   createVisual() {
     this.graphic = this.scene.add.graphics();
     this.add(this.graphic);
@@ -61,6 +71,7 @@ export default class Enemy extends Phaser.GameObjects.Container {
 
   drawShape() {
     const g = this.graphic;
+    g.setAlpha(1);
     g.clear();
     g.fillStyle(this.config.color, 1);
     g.fillCircle(0, 0, this.config.size);
@@ -151,7 +162,7 @@ export default class Enemy extends Phaser.GameObjects.Container {
     const txt = this.scene.add.text(this.x, this.y - this.config.size * 3,
       `-${Math.round(amount)}`, {
         fontFamily: 'monospace',
-        fontSize: '12px',
+        fontSize: '13px',
         color: '#ffffff',
         fontStyle: 'bold',
       }).setOrigin(0.5).setDepth(20);
@@ -174,6 +185,7 @@ export default class Enemy extends Phaser.GameObjects.Container {
     this.updateHpBar(0);
     this.hpBar.setAlpha(0);
     (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+    this.playSound(AUDIO.ENEMY_DEATH, 0.45);
 
     EventBus.emit(EVENTS.ENEMY_DIED, { enemy: this, x: this.x, y: this.y, xp: this.config.xpValue });
 
@@ -195,7 +207,7 @@ export default class Enemy extends Phaser.GameObjects.Container {
         alpha: 0,
         scaleX: 0.1,
         scaleY: 0.1,
-        duration: 350,
+        duration: 300,
         ease: 'Cubic.easeOut',
         onComplete: () => frag.destroy(),
       });
@@ -219,5 +231,13 @@ export default class Enemy extends Phaser.GameObjects.Container {
     }
 
     return nearest;
+  }
+
+  private playSound(key: string, volume: number) {
+    try {
+      this.scene.sound.play(key, { volume });
+    } catch {
+      // Audio is optional until real assets are supplied.
+    }
   }
 }

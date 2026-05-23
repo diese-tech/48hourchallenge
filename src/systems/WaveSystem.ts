@@ -17,11 +17,16 @@ export default class WaveSystem {
   private spawnQueue: string[] = [];
   private spawnTimer: number = 0;
   private currentSpawnInterval: number = 500;
+  private currentWaveDef?: WaveEntry;
+  private isNightMode: boolean = false;
+  private readonly onNightBegins = () => {
+    this.isNightMode = true;
+  };
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
 
-    EventBus.on(EVENTS.NIGHT_BEGINS, () => { /* night mode handled externally */ });
+    EventBus.on(EVENTS.NIGHT_BEGINS, this.onNightBegins);
   }
 
   start() {
@@ -31,6 +36,7 @@ export default class WaveSystem {
   nextWave() {
     this.waveNumber++;
     const def = this.getWaveDef(this.waveNumber);
+    this.currentWaveDef = def;
     this.buildSpawnQueue(def);
     this.currentSpawnInterval = def.spawnIntervalMs;
     this.spawnTimer = 0;
@@ -106,6 +112,11 @@ export default class WaveSystem {
     }
 
     this.enemies.push(enemy);
+
+    if (this.isNightMode && this.currentWaveDef?.nightSpeedMultiplier) {
+      const speedMultiplier = type === 'harasser' ? 1 : this.currentWaveDef.nightSpeedMultiplier;
+      enemy.applyNightModifiers(speedMultiplier, 0xaabbdd);
+    }
   }
 
   private randomSpawnPosition(): { x: number; y: number } {
@@ -130,6 +141,6 @@ export default class WaveSystem {
   }
 
   destroy() {
-    EventBus.off(EVENTS.NIGHT_BEGINS);
+    EventBus.off(EVENTS.NIGHT_BEGINS, this.onNightBegins);
   }
 }

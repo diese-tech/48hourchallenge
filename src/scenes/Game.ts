@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, EVENTS, TIMING, BALANCE, GAME_WIDTH, GAME_HEIGHT, GROUND_Y, FORMATION } from '../constants';
+import { AUDIO, COLORS, EVENTS, TIMING, BALANCE, GAME_WIDTH, GAME_HEIGHT, GROUND_Y, FORMATION } from '../constants';
 import EventBus from '../events';
 import Player from '../entities/Player';
 import Teammate from '../entities/Teammate';
@@ -40,6 +40,7 @@ export default class Game extends Phaser.Scene {
   private isNight: boolean = false;
   private isOver: boolean = false;
   private isPaused: boolean = false;
+  private nightVignette?: Phaser.GameObjects.Graphics;
   private blessingPool: Blessing[] = [...ALL_BLESSINGS];
   private chosenBlessings: string[] = [];
 
@@ -76,10 +77,9 @@ export default class Game extends Phaser.Scene {
     this.shineSystem = new ShineSystem(this, this.teammates);
     this.xpSystem = new XPSystem();
 
-    this.waveSystem.start();
-
     this.bindEvents();
     this.setupPause();
+    this.waveSystem.start();
 
     // Emit initial state to UI
     this.time.delayedCall(100, () => {
@@ -186,6 +186,17 @@ export default class Game extends Phaser.Scene {
       this.resolveAbility(ability);
     });
 
+    EventBus.on(EVENTS.WAVE_START, ({ wave }: { wave: number }) => {
+      this.cameras.main.shake(200, Math.min(0.035, 0.005 * wave));
+      this.showWaveAnnouncement(wave);
+      this.playSound(AUDIO.WAVE_START, 0.5);
+    });
+
+    EventBus.on(EVENTS.TEAMMATE_SHINE_START, () => {
+      this.cameras.main.shake(80, 0.004);
+      this.playSound(AUDIO.SHINE_TRIGGER, 0.55);
+    });
+
     // Enemy attacked teammate
     EventBus.on('enemy_attacked', ({ target, damage }: { target: any; damage: number; attacker: any }) => {
       if (target.takeDamage) target.takeDamage(damage);
@@ -267,6 +278,8 @@ export default class Game extends Phaser.Scene {
       case 'heal': {
         const target = this.findLowestHpTeammate();
         if (target) {
+          this.playSound(AUDIO.HEAL_CAST, 0.55);
+          this.drawHealBeam(target);
           target.receiveHeal(this.gameState.healAmount);
           this.xpSystem.addSupportXP('heal');
           this.tryShineSync(target);
@@ -277,6 +290,7 @@ export default class Game extends Phaser.Scene {
       case 'shield': {
         const target = this.findLowestHpTeammate();
         if (target) {
+          this.playSound(AUDIO.SHIELD_CAST, 0.55);
           target.receiveShield(this.gameState.shieldAmount);
           this.xpSystem.addSupportXP('shield');
           this.tryShineSync(target);
@@ -400,7 +414,10 @@ export default class Game extends Phaser.Scene {
         overlay.destroy();
         line1.destroy();
         line2.destroy();
+        this.cameras.main.setBackgroundColor('#04040c');
+        this.createNightVignette();
         this.drawBackground(true);
+        this.playSound(AUDIO.NIGHT_BEGINS, 0.6);
         EventBus.emit(EVENTS.NIGHT_BEGINS);
         this.waveSystem.start(); // restart waves in night mode
       }});
@@ -464,6 +481,73 @@ export default class Game extends Phaser.Scene {
   private syncPlayerCooldownCaps() {
     // Update the max cooldown durations if blessings changed them
     // (already applied at blessing time; this is a no-op normally)
+  }
+
+  private drawHealBeam(target: Teammate) {
+    const beam = this.add.graphics();
+    beam.lineStyle(3, COLORS.HEAL_PARTICLE, 0.95);
+    beam.lineBetween(this.player.x, this.player.y - 28, target.x, target.y - target.config.size * 2);
+    beam.setDepth(18);
+
+    this.tweens.add({
+      targets: beam,
+      alpha: 0,
+      duration: 200,
+      ease: 'Cubic.easeOut',
+      onComplete: () => beam.destroy(),
+    });
+  }
+
+  private showWaveAnnouncement(wave: number) {
+    const text = this.add.text(GAME_WIDTH / 2, -50, `WAVE ${wave}`, {
+      fontFamily: 'monospace',
+      fontSize: '42px',
+      color: '#e0e0ff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(45).setScrollFactor(0);
+
+    this.tweens.add({
+      targets: text,
+      y: GAME_HEIGHT / 2 - 80,
+      duration: 220,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        this.time.delayedCall(600, () => {
+          this.tweens.add({
+            targets: text,
+            y: text.y - 40,
+            alpha: 0,
+            duration: 260,
+            ease: 'Cubic.easeIn',
+            onComplete: () => text.destroy(),
+          });
+        });
+      },
+    });
+  }
+
+  private createNightVignette() {
+    this.nightVignette?.destroy();
+
+    const vignette = this.add.graphics();
+    vignette.setDepth(39).setScrollFactor(0);
+    vignette.fillStyle(0x000000, 0.38);
+    vignette.fillRect(0, 0, GAME_WIDTH, 90);
+    vignette.fillRect(0, GAME_HEIGHT - 120, GAME_WIDTH, 120);
+    vignette.fillRect(0, 0, 90, GAME_HEIGHT);
+    vignette.fillRect(GAME_WIDTH - 110, 0, 110, GAME_HEIGHT);
+    vignette.fillStyle(0x000000, 0.18);
+    vignette.fillRect(90, 0, 120, GAME_HEIGHT);
+    vignette.fillRect(GAME_WIDTH - 230, 0, 120, GAME_HEIGHT);
+    this.nightVignette = vignette;
+  }
+
+  private playSound(key: string, volume: number) {
+    try {
+      this.sound.play(key, { volume });
+    } catch {
+      // Placeholder audio must never block gameplay.
+    }
   }
 
   shutdown() {

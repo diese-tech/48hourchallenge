@@ -4,6 +4,7 @@ export interface WaveEntry {
   harassers: number;
   assassins: number;
   spawnIntervalMs: number; // ms between each enemy spawn in this wave
+  nightSpeedMultiplier?: number;
 }
 
 export const DAY_WAVES: WaveEntry[] = [
@@ -18,18 +19,12 @@ export const DAY_WAVES: WaveEntry[] = [
   // Wave 9+ = night waves that loop
 ];
 
-// Night waves — escalate infinitely by applying multipliers to this template
-export const NIGHT_WAVE_BASE: Omit<WaveEntry, 'wave'> = {
-  grunts: 10,
-  harassers: 5,
-  assassins: 4,
-  spawnIntervalMs: 280,
-};
-
+// Night waves escalate indefinitely with faster spawns and speed pressure.
 export function getNightWave(waveNumber: number): WaveEntry {
   const waveOffset = Math.max(0, waveNumber - 9);
   const harassers = Math.min(8, 3 + waveOffset);
   const assassins = Math.min(8, 3 + Math.floor(waveOffset * 1.5));
+  const nightSpeedMultiplier = 1 + waveOffset * 0.15;
 
   return {
     wave: waveNumber,
@@ -37,5 +32,6 @@ export function getNightWave(waveNumber: number): WaveEntry {
     harassers,
     assassins,
     spawnIntervalMs: Math.max(150, 400 - waveOffset * 25),
+    nightSpeedMultiplier,
   };
 }

@@ -87,6 +87,7 @@ export default class Teammate extends Phaser.GameObjects.Container {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   update(delta: number, enemies: any[], playerX: number, playerY: number) {
     if (this.state === 'DEAD') return;
+    this.hpBar.setVisible(this.x >= -this.config.size);
 
     this.attackTimer = Math.max(0, this.attackTimer - delta);
 
@@ -212,8 +213,9 @@ export default class Teammate extends Phaser.GameObjects.Container {
     const width = this.config.size * 3;
     const height = 4;
     const x = -(this.config.size * 1.5);
-    const y = -(this.config.size * 4.8);
+    const y = -(this.config.size * 4.5);
 
+    g.setAlpha(1);
     g.clear();
     g.fillStyle(0x222233, 1);
     g.fillRect(x, y, width, height);
@@ -307,7 +309,7 @@ export default class Teammate extends Phaser.GameObjects.Container {
 
     const ring = this.scene.add.graphics();
     ring.lineStyle(3, COLORS.SHIELD_PARTICLE, 1);
-    ring.strokeCircle(this.x, this.y, this.config.size + 4);
+    ring.strokeCircle(this.x, this.y, this.config.size + 8);
     ring.setDepth(6);
 
     this.scene.tweens.add({

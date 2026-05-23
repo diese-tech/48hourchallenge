@@ -63,6 +63,15 @@ export const TIMING = {
   LEVEL_UP_PAUSE_MS: 0, // paused until player chooses
 };
 
+export const AUDIO = {
+  SHINE_TRIGGER: 'shine_trigger',
+  HEAL_CAST: 'heal_cast',
+  SHIELD_CAST: 'shield_cast',
+  WAVE_START: 'wave_start',
+  NIGHT_BEGINS: 'night_begins',
+  ENEMY_DEATH: 'enemy_death',
+};
+
 // Entity sizes (radius or half-size)
 export const SIZES = {
   PLAYER: 16,
