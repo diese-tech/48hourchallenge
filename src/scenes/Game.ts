@@ -100,6 +100,40 @@ export default class Game extends Phaser.Scene {
     for (let x = 0; x < GAME_WIDTH; x += 80) grid.lineBetween(x, 0, x, GROUND_Y);
     grid.setDepth(0);
     this.background.setDepth(0);
+
+    const midground = this.add.graphics();
+    midground.setDepth(1);
+
+    // Team-side distant base structures
+    midground.fillStyle(0x080816, 0.7);
+    midground.fillRect(0, GROUND_Y - 300, 80, 300);
+    midground.fillTriangle(0, GROUND_Y, 0, GROUND_Y - 220, 80, GROUND_Y);
+
+    // Structural columns/pillars
+    const pillarXs = [120, 310, 580, 890, 1140];
+    const pillarWidths = [18, 28, 14, 24, 20];
+    const pillarHeights = [140, 220, 90, 180, 120];
+
+    midground.fillStyle(0x0d0d22, 1);
+    midground.lineStyle(1, COLORS.UI_BORDER, 0.18);
+    for (let i = 0; i < pillarXs.length; i++) {
+      const width = pillarWidths[i];
+      const height = pillarHeights[i];
+      const x = pillarXs[i] - width / 2;
+      const y = GROUND_Y - height;
+      midground.fillRect(x, y, width, height);
+      midground.strokeRect(x, y, width, height);
+    }
+
+    // Enemy-side looming fortress silhouette
+    midground.fillStyle(0x0a0814, 1);
+    midground.beginPath();
+    midground.moveTo(1200, GROUND_Y);
+    midground.lineTo(1260, GROUND_Y - 280);
+    midground.lineTo(1280, GROUND_Y - 180);
+    midground.lineTo(1280, GROUND_Y);
+    midground.closePath();
+    midground.fillPath();
   }
 
   private drawBackground(night: boolean) {
