@@ -32,6 +32,7 @@ export default class Teammate extends Phaser.GameObjects.Container {
   shineActive: boolean = false;
 
   protected graphic!: Phaser.GameObjects.Graphics;
+  protected hpBar!: Phaser.GameObjects.Graphics;
   protected glowGraphic!: Phaser.GameObjects.Graphics;
   protected shineParticles?: Phaser.GameObjects.Particles.ParticleEmitter;
   protected attackTimer: number = 0;
@@ -51,6 +52,7 @@ export default class Teammate extends Phaser.GameObjects.Container {
     body.setCollideWorldBounds(true);
 
     this.setDepth(5);
+    this.updateHpBar();
   }
 
   createVisual() {
@@ -59,6 +61,9 @@ export default class Teammate extends Phaser.GameObjects.Container {
 
     this.graphic = this.scene.add.graphics();
     this.add(this.graphic);
+
+    this.hpBar = this.scene.add.graphics();
+    this.add(this.hpBar);
 
     this.drawShape();
 
@@ -201,6 +206,32 @@ export default class Teammate extends Phaser.GameObjects.Container {
     return nearest;
   }
 
+
+  protected updateHpBar(forcedFrac?: number) {
+    const g = this.hpBar;
+    const width = this.config.size * 3;
+    const height = 4;
+    const x = -(this.config.size * 1.5);
+    const y = -(this.config.size * 4.8);
+
+    g.clear();
+    g.fillStyle(0x222233, 1);
+    g.fillRect(x, y, width, height);
+
+    const frac = Phaser.Math.Clamp(forcedFrac ?? (this.hp / this.maxHp), 0, 1);
+    const fillWidth = frac > 0 ? Math.max(2, width * frac) : 0;
+    const color = frac > 0.5
+      ? COLORS.HEALTH_HIGH
+      : frac > BALANCE.CRITICAL_HP_THRESHOLD
+        ? COLORS.HEALTH_MID
+        : COLORS.HEALTH_LOW;
+
+    if (fillWidth > 0) {
+      g.fillStyle(color, 1);
+      g.fillRect(x, y, fillWidth, height);
+    }
+  }
+
   transitionTo(s: TeammateState) {
     this.state = s;
   }
@@ -225,6 +256,24 @@ export default class Teammate extends Phaser.GameObjects.Container {
       yoyo: true,
     });
 
+    const txt = this.scene.add.text(this.x, this.y - this.config.size * 3,
+      `-${Math.round(amount)}`, {
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        color: '#ff4444',
+        fontStyle: 'bold',
+      }).setOrigin(0.5).setDepth(20);
+    this.scene.tweens.add({
+      targets: txt,
+      y: txt.y - 40,
+      alpha: 0,
+      duration: 800,
+      ease: 'Cubic.easeOut',
+      onComplete: () => txt.destroy(),
+    });
+
+    this.updateHpBar();
+
     if (this.hp <= 0) {
       this.die();
     } else if (this.hp / this.maxHp <= BALANCE.CRITICAL_HP_THRESHOLD && this.state !== 'CRITICAL') {
@@ -234,6 +283,7 @@ export default class Teammate extends Phaser.GameObjects.Container {
 
   receiveHeal(amount: number) {
     this.hp = Math.min(this.maxHp, this.hp + amount);
+    this.updateHpBar();
     EventBus.emit(EVENTS.TEAMMATE_HEALED, { teammate: this, hp: this.hp, maxHp: this.maxHp });
 
     const emitter = this.scene.add.particles(this.x, this.y, undefined, {
@@ -336,6 +386,8 @@ export default class Teammate extends Phaser.GameObjects.Container {
 
   private die() {
     this.transitionTo('DEAD');
+    this.updateHpBar(0);
+    this.hpBar.setAlpha(0);
     (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
     this.shineParticles?.destroy();
 

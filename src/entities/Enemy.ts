@@ -27,6 +27,7 @@ export default class Enemy extends Phaser.GameObjects.Container {
   type: EnemyType;
 
   protected graphic!: Phaser.GameObjects.Graphics;
+  protected hpBar!: Phaser.GameObjects.Graphics;
   protected attackTimer: number = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, config: EnemyConfig, type: EnemyType) {
@@ -45,11 +46,16 @@ export default class Enemy extends Phaser.GameObjects.Container {
     body.setCircle(config.size, -config.size, -config.size);
 
     this.setDepth(4);
+    this.updateHpBar();
   }
 
   createVisual() {
     this.graphic = this.scene.add.graphics();
     this.add(this.graphic);
+
+    this.hpBar = this.scene.add.graphics();
+    this.add(this.hpBar);
+
     this.drawShape();
   }
 
@@ -111,6 +117,26 @@ export default class Enemy extends Phaser.GameObjects.Container {
     });
   }
 
+
+  protected updateHpBar(forcedFrac?: number) {
+    const g = this.hpBar;
+    const width = this.config.size * 2.5;
+    const height = 3;
+    const x = -(width / 2);
+    const y = -(this.config.size * 3.5);
+
+    g.clear();
+    g.fillStyle(0x222233, 1);
+    g.fillRect(x, y, width, height);
+
+    const frac = Phaser.Math.Clamp(forcedFrac ?? (this.hp / this.maxHp), 0, 1);
+    const fillWidth = frac > 0 ? Math.max(2, width * frac) : 0;
+    if (fillWidth > 0) {
+      g.fillStyle(0xcc2222, 1);
+      g.fillRect(x, y, fillWidth, height);
+    }
+  }
+
   takeDamage(amount: number) {
     if (!this.active) return;
     this.hp = Math.max(0, this.hp - amount);
@@ -122,11 +148,31 @@ export default class Enemy extends Phaser.GameObjects.Container {
       yoyo: true,
     });
 
+    const txt = this.scene.add.text(this.x, this.y - this.config.size * 3,
+      `-${Math.round(amount)}`, {
+        fontFamily: 'monospace',
+        fontSize: '12px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      }).setOrigin(0.5).setDepth(20);
+    this.scene.tweens.add({
+      targets: txt,
+      y: txt.y - 40,
+      alpha: 0,
+      duration: 800,
+      ease: 'Cubic.easeOut',
+      onComplete: () => txt.destroy(),
+    });
+
+    this.updateHpBar();
+
     if (this.hp <= 0) this.die();
   }
 
   private die() {
     this.active = false;
+    this.updateHpBar(0);
+    this.hpBar.setAlpha(0);
     (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
 
     EventBus.emit(EVENTS.ENEMY_DIED, { enemy: this, x: this.x, y: this.y, xp: this.config.xpValue });
