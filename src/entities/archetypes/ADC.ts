@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import Teammate from '../Teammate';
 import type { TeammateConfig } from '../Teammate';
 import { COLORS, SIZES, GAME_WIDTH, GROUND_Y } from '../../constants';
+import EventBus from '../../events';
 
 const CONFIG: TeammateConfig = {
   key: 'lyria',
@@ -20,8 +21,56 @@ const CONFIG: TeammateConfig = {
 };
 
 export default class ADC extends Teammate {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private readonly onEnemyAttacked = ({ target, attacker }: { target: any; attacker: any }) => {
+    if (attacker === this && target?.active) {
+      this.spawnProjectile(target);
+    }
+  };
+
   constructor(scene: Phaser.Scene) {
     super(scene, CONFIG.zoneX, CONFIG.zoneY, CONFIG);
+
+    EventBus.on('enemy_attacked', this.onEnemyAttacked);
+  }
+
+  override destroy(fromScene?: boolean) {
+    EventBus.off('enemy_attacked', this.onEnemyAttacked);
+    super.destroy(fromScene);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private spawnProjectile(target: any) {
+    const bolt = this.scene.add.graphics();
+    bolt.fillStyle(COLORS.ADC_BOLT, 0.9);
+    bolt.fillCircle(0, 0, 3);
+    bolt.setPosition(this.x, this.y - this.config.size * 1.5);
+    bolt.setDepth(8);
+
+    this.scene.tweens.add({
+      targets: bolt,
+      x: target.x,
+      y: target.y - 10,
+      duration: 140,
+      ease: 'Linear',
+      onComplete: () => {
+        const pop = this.scene.add.graphics();
+        pop.fillStyle(COLORS.ADC_BOLT, 0.7);
+        pop.fillCircle(0, 0, 5);
+        pop.setPosition(target.x, target.y - 10).setDepth(8);
+
+        this.scene.tweens.add({
+          targets: pop,
+          scaleX: 2.5,
+          scaleY: 2.5,
+          alpha: 0,
+          duration: 100,
+          onComplete: () => pop.destroy(),
+        });
+
+        bolt.destroy();
+      },
+    });
   }
 
   drawShape() {
