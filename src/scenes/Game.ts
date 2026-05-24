@@ -426,6 +426,7 @@ export default class Game extends Phaser.Scene {
   private triggerVictory() {
     if (this.isNight) return;
     this.victoryAchieved = true;
+    this.isPaused = true;
 
     // Gold flash
     this.cameras.main.flash(400, 255, 215, 0);
@@ -435,11 +436,12 @@ export default class Game extends Phaser.Scene {
     const cy = GAME_HEIGHT / 2;
 
     const overlay = this.add.graphics();
-    overlay.fillStyle(0x000000, 0);
+    overlay.fillStyle(0x000000, 0.7);
     overlay.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     overlay.setDepth(40);
+    overlay.setAlpha(0);
 
-    this.tweens.add({ targets: overlay, fillAlpha: 0.7, duration: 1200 });
+    this.tweens.add({ targets: overlay, alpha: 1, duration: 1200 });
 
     const line1 = this.add.text(cx, cy - 30, 'VICTORY!', {
       fontFamily: 'monospace', fontSize: '42px', color: '#ffd700', fontStyle: 'bold',
@@ -458,6 +460,7 @@ export default class Game extends Phaser.Scene {
         line1.destroy();
         line2.destroy();
 
+        this.isPaused = false;
         this.isNight = true;
         this.cameras.main.setBackgroundColor('#04040c');
         this.createNightVignette();

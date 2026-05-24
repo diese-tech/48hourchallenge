@@ -2,7 +2,6 @@ import Phaser from 'phaser';
 import Teammate from '../Teammate';
 import type { TeammateConfig } from '../Teammate';
 import { COLORS, SIZES, GAME_WIDTH, GROUND_Y, BALANCE } from '../../constants';
-import EventBus from '../../events';
 
 const CONFIG: TeammateConfig = {
   key: 'nyx',
@@ -164,9 +163,9 @@ export default class Jungler extends Teammate {
       duration: 150,
       ease: 'Cubic.easeIn',
       onComplete: () => {
-        // Deal bonus damage
+        // Deal bonus damage directly
         const bonusDmg = this.config.damage * 0.5;
-        EventBus.emit('enemy_attacked', { target: nearest, damage: bonusDmg, attacker: this });
+        nearest.takeDamage(bonusDmg);
 
         // Draw trail from start to current
         trail.lineStyle(2, COLORS.JUNGLER_TRAIL, 0.8);
