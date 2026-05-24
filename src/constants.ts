@@ -54,10 +54,10 @@ export const COLORS = {
 
 // Timing (ms)
 export const TIMING = {
-  DAY_DURATION_MS: 6 * 60 * 1000, // 6 minutes
+  DAY_DURATION_MS: 4 * 60 * 1000, // 4 minutes
   WAVE_LULL_MS: 5000,
-  SHINE_INTERVAL_MIN_MS: 35000,
-  SHINE_INTERVAL_MAX_MS: 50000,
+  SHINE_INTERVAL_MIN_MS: 20000,
+  SHINE_INTERVAL_MAX_MS: 35000,
   SHINE_DURATION_MS: 12000,
   QUIP_CARD_HOLD_MS: 1800,
   LEVEL_UP_PAUSE_MS: 0, // paused until player chooses
@@ -88,13 +88,15 @@ export const SIZES = {
 export const BALANCE = {
   PLAYER_SPEED: 240,
   PLAYER_MAX_HP: 100,
-  TEAMMATE_MAX_HP: 200,
+  TEAMMATE_MAX_HP: 180,
+  SOLO_MAX_HP: 350,
+  ADC_MAX_HP: 130,
   HEAL_AMOUNT: 50,
-  HEAL_COOLDOWN_MS: 4000,
-  SHIELD_AMOUNT: 60,
-  SHIELD_COOLDOWN_MS: 6000,
-  DASH_COOLDOWN_MS: 5000,
-  INTERCEPT_COOLDOWN_MS: 8000,
+  HEAL_COOLDOWN_MS: 3000,
+  SHIELD_AMOUNT: 80,
+  SHIELD_COOLDOWN_MS: 4500,
+  DASH_COOLDOWN_MS: 3500,
+  INTERCEPT_COOLDOWN_MS: 6000,
   SHINE_DAMAGE_MULT: 1.6,
   XP_PER_HEAL: 10,
   XP_PER_SHIELD: 8,
@@ -105,14 +107,16 @@ export const BALANCE = {
   GRUNT_HP: 80,
   HARASSER_HP: 60,
   ASSASSIN_HP: 50,
-  GRUNT_DMG: 12,
-  HARASSER_DMG: 10,
-  ASSASSIN_DMG: 18,
-  GRUNT_SPEED: 90,
+  GRUNT_DMG: 8,
+  HARASSER_DMG: 7,
+  ASSASSIN_DMG: 14,
+  GRUNT_SPEED: 75,
   HARASSER_SPEED: 110,
-  ASSASSIN_SPEED: 200,
+  ASSASSIN_SPEED: 160,
   CRITICAL_HP_THRESHOLD: 0.25,
-  MAX_ENEMIES: 20,
+  MAX_ENEMIES: 25,
+  JUNGLER_DASH_INTERVAL_MS: 4000,
+  JUNGLER_DASH_DISTANCE: 150,
 };
 
 // Ground line Y — characters stand here (side-scrolling brawler perspective)
@@ -148,6 +152,7 @@ export const EVENTS = {
   TEAMMATE_SHINE_END: 'teammate_shine_end',
   PLAYER_CAST: 'player_cast',
   PLAYER_DAMAGED: 'player_damaged',
+  PLAYER_DIED: 'player_died',
   ENEMY_DIED: 'enemy_died',
   WAVE_START: 'wave_start',
   WAVE_CLEAR: 'wave_clear',
@@ -157,4 +162,5 @@ export const EVENTS = {
   NIGHT_BEGINS: 'night_begins',
   GAME_OVER: 'game_over',
   XP_GAINED: 'xp_gained',
+  VICTORY: 'victory',
 };

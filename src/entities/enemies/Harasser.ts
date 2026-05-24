@@ -46,9 +46,9 @@ export default class Harasser extends Enemy {
     g.fillCircle(-s * 0.15, -s * 2.9, s * 0.16);
   }
 
-  // Targets lowest HP teammate instead of nearest
+  // Targets lowest HP teammate (or player) instead of nearest
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected getTarget(teammates: any[]): any | null {
+  protected getTarget(teammates: any[], _shineTarget?: any, player?: any): any | null {
     let lowestHp = Infinity;
     let target: Phaser.GameObjects.GameObject | null = null;
 
@@ -61,14 +61,19 @@ export default class Harasser extends Enemy {
       }
     }
 
+    // Include player in lowest-HP pool
+    if (player && player.hp > 0 && player.hp < lowestHp) {
+      target = player;
+    }
+
     return target;
   }
 
   // Harasser kites: if target is too close, back away
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  update(delta: number, teammates: any[], _shineTarget?: any) {
+  update(delta: number, teammates: any[], _shineTarget?: any, player?: any) {
     this.attackTimer = Math.max(0, this.attackTimer - delta);
-    const target = this.getTarget(teammates);
+    const target = this.getTarget(teammates, _shineTarget, player);
     if (!target) return;
 
     const tx = (target as any).x;

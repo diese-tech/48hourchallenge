@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import Teammate from '../Teammate';
 import type { TeammateConfig } from '../Teammate';
-import { COLORS, SIZES, GAME_WIDTH, GROUND_Y } from '../../constants';
+import { COLORS, SIZES, GAME_WIDTH, GROUND_Y, BALANCE } from '../../constants';
 import EventBus from '../../events';
 
 const CONFIG: TeammateConfig = {
@@ -14,7 +14,7 @@ const CONFIG: TeammateConfig = {
   attackRange: 210,
   aggroRange: 290,
   damage: 14,
-  attackRate: 650,
+  attackRate: 500,
   zoneX: GAME_WIDTH * 0.29,
   zoneY: GROUND_Y - 8,
   zoneRadius: 110,
@@ -30,6 +30,9 @@ export default class ADC extends Teammate {
 
   constructor(scene: Phaser.Scene) {
     super(scene, CONFIG.zoneX, CONFIG.zoneY, CONFIG);
+    this.maxHp = BALANCE.ADC_MAX_HP;
+    this.hp = BALANCE.ADC_MAX_HP;
+    this.updateHpBar();
 
     EventBus.on('enemy_attacked', this.onEnemyAttacked);
   }

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import Teammate from '../Teammate';
 import type { TeammateConfig } from '../Teammate';
-import { COLORS, SIZES, GAME_WIDTH, GROUND_Y } from '../../constants';
+import { COLORS, SIZES, GAME_WIDTH, GROUND_Y, BALANCE } from '../../constants';
 
 const CONFIG: TeammateConfig = {
   key: 'nyx',
@@ -24,6 +24,8 @@ export default class Jungler extends Teammate {
   private roamInterval: number = 3500;
   private targetRoamX: number = -60;
   private targetRoamY: number = GROUND_Y;
+  private dashSlashTimer: number = 0;
+  private isDashing: boolean = false;
 
   constructor(scene: Phaser.Scene) {
     super(scene, -60, GROUND_Y, CONFIG);
@@ -109,7 +111,101 @@ export default class Jungler extends Teammate {
     this.config.zoneX = this.targetRoamX;
     this.config.zoneY = this.targetRoamY;
 
+    // Dash-slash logic
+    this.dashSlashTimer += delta;
+    if (
+      this.dashSlashTimer >= BALANCE.JUNGLER_DASH_INTERVAL_MS &&
+      !this.isDashing &&
+      this.state !== 'DEAD'
+    ) {
+      const inRange = enemies.filter((e: any) => {
+        if (!e.active) return false;
+        const dist = Phaser.Math.Distance.Between(this.x, this.y, e.x, e.y);
+        return dist < this.config.aggroRange;
+      });
+
+      if (inRange.length > 0) {
+        this.dashSlashTimer = 0;
+        this.performDashSlash(inRange);
+      }
+    }
+
     super.update(delta, enemies, playerX, playerY);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private performDashSlash(enemies: any[]) {
+    this.isDashing = true;
+
+    // Pick nearest enemy
+    let nearest = enemies[0];
+    let minDist = Infinity;
+    for (const e of enemies) {
+      const dist = Phaser.Math.Distance.Between(this.x, this.y, e.x, e.y);
+      if (dist < minDist) {
+        minDist = dist;
+        nearest = e;
+      }
+    }
+
+    const startX = this.x;
+    const startY = this.y;
+
+    // Create trail line
+    const trail = this.scene.add.graphics();
+    trail.setDepth(3);
+
+    // Tween toward enemy
+    this.scene.tweens.add({
+      targets: this,
+      x: nearest.x,
+      y: nearest.y,
+      duration: 150,
+      ease: 'Cubic.easeIn',
+      onComplete: () => {
+        // Deal bonus damage directly
+        const bonusDmg = this.config.damage * 0.5;
+        nearest.takeDamage(bonusDmg);
+
+        // Draw trail from start to current
+        trail.lineStyle(2, COLORS.JUNGLER_TRAIL, 0.8);
+        trail.lineBetween(startX, startY, this.x, this.y);
+
+        // Fade trail
+        this.scene.tweens.add({
+          targets: trail,
+          alpha: 0,
+          duration: 300,
+          onComplete: () => trail.destroy(),
+        });
+
+        // Slash arc graphic
+        const slash = this.scene.add.graphics();
+        slash.lineStyle(3, COLORS.JUNGLER, 0.9);
+        slash.beginPath();
+        slash.arc(this.x, this.y, this.config.size + 10, 0, Math.PI, false);
+        slash.strokePath();
+        slash.setDepth(7);
+        this.scene.tweens.add({
+          targets: slash,
+          alpha: 0,
+          duration: 300,
+          onComplete: () => slash.destroy(),
+        });
+
+        // Tween back toward zone
+        this.scene.tweens.add({
+          targets: this,
+          x: this.targetRoamX,
+          y: this.targetRoamY,
+          duration: 200,
+          ease: 'Cubic.easeOut',
+          onComplete: () => {
+            this.isDashing = false;
+          },
+        });
+      },
+    });
   }
 
   private pickNewRoamTarget() {

@@ -29,11 +29,13 @@ export default class Teammate extends Phaser.GameObjects.Container {
   state: TeammateState = 'PATROL';
   hp: number = BALANCE.TEAMMATE_MAX_HP;
   maxHp: number = BALANCE.TEAMMATE_MAX_HP;
+  shield: number = 0;
   shineActive: boolean = false;
 
   protected graphic!: Phaser.GameObjects.Graphics;
   protected hpBar!: Phaser.GameObjects.Graphics;
   protected glowGraphic!: Phaser.GameObjects.Graphics;
+  protected shieldGraphic!: Phaser.GameObjects.Graphics;
   protected shineParticles?: Phaser.GameObjects.Particles.ParticleEmitter;
   protected attackTimer: number = 0;
 
@@ -64,6 +66,9 @@ export default class Teammate extends Phaser.GameObjects.Container {
 
     this.hpBar = this.scene.add.graphics();
     this.add(this.hpBar);
+
+    this.shieldGraphic = this.scene.add.graphics();
+    this.add(this.shieldGraphic);
 
     this.drawShape();
 
@@ -240,6 +245,45 @@ export default class Teammate extends Phaser.GameObjects.Container {
 
   takeDamage(amount: number) {
     if (this.state === 'DEAD') return;
+
+    // Shield absorption
+    if (this.shield > 0) {
+      const absorbed = Math.min(this.shield, amount);
+      this.shield -= absorbed;
+      amount -= absorbed;
+
+      // Flash shield graphic on hit
+      this.scene.tweens.add({
+        targets: this.shieldGraphic,
+        alpha: 0.3,
+        duration: 60,
+        yoyo: true,
+      });
+
+      // Floating blocked text
+      if (absorbed > 0) {
+        const txt = this.scene.add.text(this.x, this.y - this.config.size * 4,
+          'BLOCKED', {
+            fontFamily: 'monospace',
+            fontSize: '11px',
+            color: '#88aaff',
+            fontStyle: 'bold',
+          }).setOrigin(0.5).setDepth(20);
+        this.scene.tweens.add({
+          targets: txt,
+          y: txt.y - 30,
+          alpha: 0,
+          duration: 600,
+          ease: 'Cubic.easeOut',
+          onComplete: () => txt.destroy(),
+        });
+      }
+
+      this.updateShieldVisual();
+
+      if (amount <= 0) return;
+    }
+
     this.hp = Math.max(0, this.hp - amount);
 
     EventBus.emit(EVENTS.TEAMMATE_DAMAGED, { teammate: this, hp: this.hp, maxHp: this.maxHp });
@@ -305,8 +349,12 @@ export default class Teammate extends Phaser.GameObjects.Container {
   }
 
   receiveShield(amount: number) {
+    this.shield = amount;
+    this.updateShieldVisual();
+
     EventBus.emit(EVENTS.TEAMMATE_SHIELDED, { teammate: this, amount });
 
+    // Pulse ring animation
     const ring = this.scene.add.graphics();
     ring.lineStyle(3, COLORS.SHIELD_PARTICLE, 1);
     ring.strokeCircle(this.x, this.y, this.config.size + 8);
@@ -321,6 +369,14 @@ export default class Teammate extends Phaser.GameObjects.Container {
       ease: 'Cubic.easeOut',
       onComplete: () => ring.destroy(),
     });
+  }
+
+  updateShieldVisual() {
+    this.shieldGraphic.clear();
+    if (this.shield > 0) {
+      this.shieldGraphic.lineStyle(2, COLORS.SHIELD_PARTICLE, 0.7);
+      this.shieldGraphic.strokeCircle(0, 0, this.config.size + 6);
+    }
   }
 
   activateShine() {

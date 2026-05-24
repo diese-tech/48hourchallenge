@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, EVENTS } from '../constants';
 import EventBus from '../events';
-import Teammate from '../entities/Teammate';
+import type Teammate from '../entities/Teammate';
 
 interface PortraitCard {
   bg: Phaser.GameObjects.Graphics;
@@ -235,6 +235,11 @@ export default class UI extends Phaser.Scene {
       this.timerText.setColor('#8888ff');
       this.timerText.setText('NIGHT');
     });
+
+    EventBus.on(EVENTS.VICTORY, () => {
+      this.timerText.setColor('#ffd700');
+      this.timerText.setText('ENDLESS');
+    });
   }
 
   private isNight: boolean = false;
@@ -277,12 +282,12 @@ export default class UI extends Phaser.Scene {
     if (idx < 0) return;
 
     const cdMap: Record<string, number> = {
-      heal: 4000,
-      shield: 6000,
-      dash: 5000,
-      intercept: 8000,
+      heal: 3000,
+      shield: 4500,
+      dash: 3500,
+      intercept: 6000,
     };
-    this.abilityCooldowns[ability] = cdMap[ability] || 4000;
+    this.abilityCooldowns[ability] = cdMap[ability] || 3000;
   }
 
   private waveAnnouncement(wave: number) {

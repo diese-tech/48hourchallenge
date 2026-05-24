@@ -40,6 +40,7 @@ export default class Game extends Phaser.Scene {
   private isNight: boolean = false;
   private isOver: boolean = false;
   private isPaused: boolean = false;
+  private victoryAchieved: boolean = false;
   private nightVignette?: Phaser.GameObjects.Graphics;
   private blessingPool: Blessing[] = [...ALL_BLESSINGS];
   private chosenBlessings: string[] = [];
@@ -67,6 +68,7 @@ export default class Game extends Phaser.Scene {
     this.isOver = false;
     this.isPaused = false;
     this.isNight = false;
+    this.victoryAchieved = false;
     this.dayTimer = TIMING.DAY_DURATION_MS;
 
     this.createBackground();
@@ -177,6 +179,7 @@ export default class Game extends Phaser.Scene {
 
   private createPlayer() {
     this.player = new Player(this, GAME_WIDTH * FORMATION.PLAYER_X, FORMATION.PLAYER_Y);
+    this.player.teammates = this.teammates;
   }
 
   private bindEvents() {
@@ -257,6 +260,11 @@ export default class Game extends Phaser.Scene {
       if (allDead) this.triggerGameOver();
     });
 
+    // Player died
+    EventBus.on(EVENTS.PLAYER_DIED, () => {
+      this.triggerGameOver();
+    });
+
     // Triage Rush: auto-heal any teammate at ≤20% HP
     this.time.addEvent({
       delay: 500,
@@ -292,6 +300,7 @@ export default class Game extends Phaser.Scene {
         if (target) {
           this.playSound(AUDIO.SHIELD_CAST, 0.55);
           target.receiveShield(this.gameState.shieldAmount);
+          this.drawShieldBeam(target);
           this.xpSystem.addSupportXP('shield');
           this.tryShineSync(target);
         }
@@ -301,22 +310,57 @@ export default class Game extends Phaser.Scene {
         // Handled in Player directly
         break;
       case 'intercept': {
-        // AoE around player: pull damage from nearby enemies briefly
+        // Protective Pulse: damage nearby enemies, shield nearby allies
         this.xpSystem.addSupportXP('intercept');
         this.cameras.main.shake(100, 0.006);
-        // Emit pulse visual
+
+        // Damage enemies within 200px
+        const enemies = this.waveSystem.getEnemies();
+        for (const enemy of enemies) {
+          const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+          if (dist <= 200) {
+            enemy.takeDamage(25);
+          }
+        }
+
+        // Shield allies within 250px
+        for (const tm of this.teammates) {
+          if (tm.state === 'DEAD') continue;
+          const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, tm.x, tm.y);
+          if (dist <= 250) {
+            tm.receiveShield(30);
+          }
+        }
+
+        // Emit pulse visual (larger)
         const ring = this.add.graphics();
         ring.lineStyle(3, COLORS.WHITE, 1);
         ring.strokeCircle(this.player.x, this.player.y, 20);
         ring.setDepth(15);
         this.tweens.add({
           targets: ring,
-          scaleX: 6,
-          scaleY: 6,
+          scaleX: 8,
+          scaleY: 8,
           alpha: 0,
           duration: 400,
           ease: 'Cubic.easeOut',
           onComplete: () => ring.destroy(),
+        });
+
+        // Floating PULSE! text
+        const pulseText = this.add.text(this.player.x, this.player.y - 40, 'PULSE!', {
+          fontFamily: 'monospace',
+          fontSize: '16px',
+          color: '#ffd700',
+          fontStyle: 'bold',
+        }).setOrigin(0.5).setDepth(20);
+        this.tweens.add({
+          targets: pulseText,
+          y: pulseText.y - 60,
+          alpha: 0,
+          duration: 1000,
+          ease: 'Cubic.easeOut',
+          onComplete: () => pulseText.destroy(),
         });
         break;
       }
@@ -379,47 +423,52 @@ export default class Game extends Phaser.Scene {
     });
   }
 
-  private triggerDayComplete() {
+  private triggerVictory() {
     if (this.isNight) return;
-    this.isNight = true;
+    this.victoryAchieved = true;
+    this.isPaused = true;
 
-    // Flash
-    this.cameras.main.flash(400, 255, 255, 200);
+    // Gold flash
+    this.cameras.main.flash(400, 255, 215, 0);
 
-    // Night transition text
+    // Victory overlay
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
 
     const overlay = this.add.graphics();
-    overlay.fillStyle(0x000000, 0);
+    overlay.fillStyle(0x000000, 0.7);
     overlay.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     overlay.setDepth(40);
+    overlay.setAlpha(0);
 
-    this.tweens.add({ targets: overlay, fillAlpha: 0.7, duration: 1200 });
+    this.tweens.add({ targets: overlay, alpha: 1, duration: 1200 });
 
-    const line1 = this.add.text(cx, cy - 30, 'You survived the day,', {
-      fontFamily: 'monospace', fontSize: '28px', color: '#e0e0ff',
+    const line1 = this.add.text(cx, cy - 30, 'VICTORY!', {
+      fontFamily: 'monospace', fontSize: '42px', color: '#ffd700', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(41).setAlpha(0);
 
-    const line2 = this.add.text(cx, cy + 20, 'but the enemy grows stronger at night...', {
-      fontFamily: 'monospace', fontSize: '20px', color: '#aabbdd', fontStyle: 'italic',
+    const line2 = this.add.text(cx, cy + 20, 'ENDLESS MODE UNLOCKED', {
+      fontFamily: 'monospace', fontSize: '20px', color: '#ffee88', fontStyle: 'italic',
     }).setOrigin(0.5).setDepth(41).setAlpha(0);
 
     this.tweens.add({ targets: line1, alpha: 1, delay: 600, duration: 600 });
     this.tweens.add({ targets: line2, alpha: 1, delay: 1200, duration: 600 });
 
-    this.time.delayedCall(3500, () => {
-      // Fade out overlay and text, switch to night
+    this.time.delayedCall(3000, () => {
       this.tweens.add({ targets: [overlay, line1, line2], alpha: 0, duration: 800, onComplete: () => {
         overlay.destroy();
         line1.destroy();
         line2.destroy();
+
+        this.isPaused = false;
+        this.isNight = true;
         this.cameras.main.setBackgroundColor('#04040c');
         this.createNightVignette();
         this.drawBackground(true);
         this.playSound(AUDIO.NIGHT_BEGINS, 0.6);
+        EventBus.emit(EVENTS.VICTORY);
         EventBus.emit(EVENTS.NIGHT_BEGINS);
-        this.waveSystem.start(); // restart waves in night mode
+        this.waveSystem.start();
       }});
     });
   }
@@ -435,6 +484,7 @@ export default class Game extends Phaser.Scene {
         level: this.xpSystem.level,
         isNight: this.isNight,
         blessings: this.chosenBlessings,
+        victory: this.victoryAchieved,
       });
       this.scene.stop('UI');
     });
@@ -448,7 +498,7 @@ export default class Game extends Phaser.Scene {
       this.dayTimer -= delta;
       EventBus.emit('day_timer', { remaining: Math.max(0, this.dayTimer), total: TIMING.DAY_DURATION_MS });
       if (this.dayTimer <= 0) {
-        this.triggerDayComplete();
+        this.triggerVictory();
       }
     }
 
@@ -467,7 +517,7 @@ export default class Game extends Phaser.Scene {
     const liveTeammates = this.teammates.filter(t => t.active && t.state !== 'DEAD');
     const shineTarget = this.shineSystem.getCurrentShine();
     for (const e of liveEnemies) {
-      e.update(delta, liveTeammates, shineTarget);
+      e.update(delta, liveTeammates, shineTarget, this.player);
     }
 
     // Systems
@@ -486,6 +536,21 @@ export default class Game extends Phaser.Scene {
   private drawHealBeam(target: Teammate) {
     const beam = this.add.graphics();
     beam.lineStyle(3, COLORS.HEAL_PARTICLE, 0.95);
+    beam.lineBetween(this.player.x, this.player.y - 28, target.x, target.y - target.config.size * 2);
+    beam.setDepth(18);
+
+    this.tweens.add({
+      targets: beam,
+      alpha: 0,
+      duration: 200,
+      ease: 'Cubic.easeOut',
+      onComplete: () => beam.destroy(),
+    });
+  }
+
+  private drawShieldBeam(target: Teammate) {
+    const beam = this.add.graphics();
+    beam.lineStyle(3, COLORS.SHIELD_PARTICLE, 0.95);
     beam.lineBetween(this.player.x, this.player.y - 28, target.x, target.y - target.config.size * 2);
     beam.setDepth(18);
 

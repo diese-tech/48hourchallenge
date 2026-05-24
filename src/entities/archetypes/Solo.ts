@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import Teammate from '../Teammate';
 import type { TeammateConfig } from '../Teammate';
-import { COLORS, SIZES, GAME_WIDTH, GROUND_Y } from '../../constants';
+import { COLORS, SIZES, GAME_WIDTH, GROUND_Y, BALANCE } from '../../constants';
 
 const CONFIG: TeammateConfig = {
   key: 'arthur',
@@ -12,8 +12,8 @@ const CONFIG: TeammateConfig = {
   speed: 80,
   attackRange: 70,
   aggroRange: 240,
-  damage: 28,
-  attackRate: 1000,
+  damage: 35,
+  attackRate: 900,
   zoneX: GAME_WIDTH * 0.50,
   zoneY: GROUND_Y,
   zoneRadius: 80,
@@ -22,6 +22,9 @@ const CONFIG: TeammateConfig = {
 export default class Solo extends Teammate {
   constructor(scene: Phaser.Scene) {
     super(scene, CONFIG.zoneX, CONFIG.zoneY, CONFIG);
+    this.maxHp = BALANCE.SOLO_MAX_HP;
+    this.hp = BALANCE.SOLO_MAX_HP;
+    this.updateHpBar();
   }
 
   drawShape() {
