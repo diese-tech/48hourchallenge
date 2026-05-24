@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, BALANCE, EVENTS } from '../constants';
+import { COLORS, BALANCE, EVENTS, LANE_BOUNDS } from '../constants';
 import EventBus from '../events';
 
 export type TeammateState = 'PATROL' | 'ENGAGE' | 'SHINING' | 'CRITICAL' | 'DEAD';
@@ -130,6 +130,8 @@ export default class Teammate extends Phaser.GameObjects.Container {
         this.doCritical(playerX, playerY);
         break;
     }
+
+    this.clampToLane();
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -147,7 +149,7 @@ export default class Teammate extends Phaser.GameObjects.Container {
     }
 
     const dx = this.config.zoneX - this.x;
-    const dy = this.config.zoneY - this.y;
+    const dy = Phaser.Math.Clamp(this.config.zoneY, LANE_BOUNDS.ALLY_MIN_Y, LANE_BOUNDS.ALLY_MAX_Y) - this.y;
     const distToZone = Math.sqrt(dx * dx + dy * dy);
 
     if (distToZone > 30) {
@@ -190,7 +192,7 @@ export default class Teammate extends Phaser.GameObjects.Container {
   private doCritical(playerX: number, playerY: number) {
     const body = this.body as Phaser.Physics.Arcade.Body;
     const dx = playerX - this.x;
-    const dy = playerY - this.y;
+    const dy = Phaser.Math.Clamp(playerY, LANE_BOUNDS.ALLY_MIN_Y, LANE_BOUNDS.ALLY_MAX_Y) - this.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
     if (dist > 40) {
@@ -198,6 +200,20 @@ export default class Teammate extends Phaser.GameObjects.Container {
       body.setVelocity((dx / dist) * speed, (dy / dist) * speed);
     } else {
       body.setVelocity(0, 0);
+    }
+  }
+
+  protected clampToLane() {
+    const clampedY = Phaser.Math.Clamp(this.y, LANE_BOUNDS.ALLY_MIN_Y, LANE_BOUNDS.ALLY_MAX_Y);
+    if (clampedY !== this.y) {
+      this.y = clampedY;
+      const body = this.body as Phaser.Physics.Arcade.Body;
+      if (
+        (clampedY === LANE_BOUNDS.ALLY_MIN_Y && body.velocity.y < 0) ||
+        (clampedY === LANE_BOUNDS.ALLY_MAX_Y && body.velocity.y > 0)
+      ) {
+        body.setVelocityY(0);
+      }
     }
   }
 

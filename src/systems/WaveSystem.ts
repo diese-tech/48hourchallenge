@@ -34,13 +34,6 @@ export default class WaveSystem {
   }
 
   nextWave() {
-    if (!this.isNightMode && this.waveNumber >= DAY_WAVES.length) {
-      this.spawnQueue = [];
-      this.spawnTimer = 0;
-      this.state = 'IDLE';
-      return;
-    }
-
     this.waveNumber++;
     const def = this.getWaveDef(this.waveNumber);
     this.currentWaveDef = def;
@@ -53,6 +46,10 @@ export default class WaveSystem {
   }
 
   private getWaveDef(wave: number): WaveEntry {
+    if (!this.isNightMode && wave > DAY_WAVES.length) {
+      const finalDayWave = DAY_WAVES[DAY_WAVES.length - 1];
+      return { ...finalDayWave, wave, spawnIntervalMs: Math.max(520, finalDayWave.spawnIntervalMs - 30) };
+    }
     if (wave <= DAY_WAVES.length) return DAY_WAVES[wave - 1];
     return getNightWave(wave);
   }

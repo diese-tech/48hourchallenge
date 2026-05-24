@@ -65,6 +65,8 @@ export default class Game extends Phaser.Scene {
   }
 
   create() {
+    EventBus.removeAllListeners();
+
     this.isOver = false;
     this.isPaused = false;
     this.isNight = false;

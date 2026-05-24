@@ -54,7 +54,7 @@ export const COLORS = {
 
 // Timing (ms)
 export const TIMING = {
-  DAY_DURATION_MS: 4 * 60 * 1000, // 4 minutes
+  DAY_DURATION_MS: 3 * 60 * 1000, // 3-minute challenge demo loop
   WAVE_LULL_MS: 5000,
   SHINE_INTERVAL_MIN_MS: 20000,
   SHINE_INTERVAL_MAX_MS: 35000,
@@ -123,6 +123,13 @@ export const BALANCE = {
 
 // Ground line Y — characters stand here (side-scrolling brawler perspective)
 export const GROUND_Y = 520;
+
+export const LANE_BOUNDS = {
+  PLAYER_MIN_Y: GROUND_Y - 125,
+  PLAYER_MAX_Y: GROUND_Y + 18,
+  ALLY_MIN_Y: GROUND_Y - 48,
+  ALLY_MAX_Y: GROUND_Y + 28,
+};
 
 // Formation: Solo centered, team ranked left behind him, enemies from right
 export const FORMATION = {

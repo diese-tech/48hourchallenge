@@ -85,42 +85,54 @@ export default class GameOver extends Phaser.Scene {
     this.tweens.add({ targets: sep, alpha: 1, delay: 1200, duration: 300 });
 
     // Restart / Main Menu buttons
+    const restartZone = this.add.zone(cx - 100, cy + 100, 190, 48).setDepth(10).setInteractive({ useHandCursor: true });
+    const menuZone = this.add.zone(cx + 120, cy + 100, 180, 48).setDepth(10).setInteractive({ useHandCursor: true });
+
     const restart = this.add.text(cx - 100, cy + 100, '[ PLAY AGAIN ]', {
       fontFamily: 'monospace',
       fontSize: '18px',
       color: '#4a8fff',
       letterSpacing: 2,
-    }).setOrigin(0.5).setAlpha(0).setInteractive();
+    }).setOrigin(0.5).setAlpha(0).setDepth(11);
 
     const menu = this.add.text(cx + 120, cy + 100, '[ MAIN MENU ]', {
       fontFamily: 'monospace',
       fontSize: '18px',
       color: '#6677aa',
       letterSpacing: 2,
-    }).setOrigin(0.5).setAlpha(0).setInteractive();
+    }).setOrigin(0.5).setAlpha(0).setDepth(11);
 
     [restart, menu].forEach(t => {
       this.tweens.add({ targets: t, alpha: 1, delay: 1600, duration: 400 });
-      t.on('pointerover', () => t.setStyle({ color: '#ffd700' }));
-      t.on('pointerout', () => t.setStyle({ color: t === restart ? '#4a8fff' : '#6677aa' }));
     });
 
-    restart.on('pointerdown', () => {
+    const playAgain = () => {
+      this.scene.stop('UI');
+      this.scene.stop('Game');
       this.scene.start('Game');
       this.scene.start('UI');
       this.scene.bringToTop('UI');
-    });
+    };
 
-    menu.on('pointerdown', () => {
+    const mainMenu = () => {
+      this.scene.stop('UI');
+      this.scene.stop('Game');
       this.scene.start('MainMenu');
-    });
+    };
+
+    restartZone.on('pointerover', () => restart.setStyle({ color: '#ffd700' }));
+    restartZone.on('pointerout', () => restart.setStyle({ color: '#4a8fff' }));
+    restartZone.on('pointerdown', playAgain);
+
+    menuZone.on('pointerover', () => menu.setStyle({ color: '#ffd700' }));
+    menuZone.on('pointerout', () => menu.setStyle({ color: '#6677aa' }));
+    menuZone.on('pointerdown', mainMenu);
+
+    restart.setInteractive({ useHandCursor: true }).on('pointerdown', playAgain);
+    menu.setInteractive({ useHandCursor: true }).on('pointerdown', mainMenu);
 
     // ENTER to restart
-    this.input.keyboard!.once('keydown-ENTER', () => {
-      this.scene.start('Game');
-      this.scene.start('UI');
-      this.scene.bringToTop('UI');
-    });
+    this.input.keyboard!.once('keydown-ENTER', playAgain);
 
     // Title subtitle
     this.add.text(cx, cy - 120, 'a moba story', {

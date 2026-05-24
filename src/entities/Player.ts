@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ASSETS, COLORS, SIZES, BALANCE, EVENTS } from '../constants';
+import { ASSETS, COLORS, SIZES, BALANCE, EVENTS, LANE_BOUNDS } from '../constants';
 import EventBus from '../events';
 
 export type PlayerState = 'FREE' | 'CASTING' | 'UPGRADE_MENU';
@@ -240,6 +240,7 @@ export default class Player extends Phaser.GameObjects.Container {
 
     this.updatePassiveRegen(delta);
     this.handleMovement();
+    this.clampToLane();
   }
 
   private updatePassiveRegen(delta: number) {
@@ -350,14 +351,22 @@ export default class Player extends Phaser.GameObjects.Container {
       const maxDist = 180;
       const clampedDist = Math.min(dist, maxDist);
       dashX = this.x + (dx / dist) * clampedDist;
-      dashY = this.y + (dy / dist) * clampedDist;
+      dashY = Phaser.Math.Clamp(
+        this.y + (dy / dist) * clampedDist,
+        LANE_BOUNDS.PLAYER_MIN_Y,
+        LANE_BOUNDS.PLAYER_MAX_Y
+      );
     } else {
       // Fallback: movement-direction dash
       const vx = body.velocity.x;
       const vy = body.velocity.y;
       const len = Math.sqrt(vx * vx + vy * vy) || 1;
       dashX = this.x + (vx / len) * 120;
-      dashY = this.y + (vy / len) * 120;
+      dashY = Phaser.Math.Clamp(
+        this.y + (vy / len) * 120,
+        LANE_BOUNDS.PLAYER_MIN_Y,
+        LANE_BOUNDS.PLAYER_MAX_Y
+      );
     }
 
     this.scene.tweens.add({
@@ -366,6 +375,8 @@ export default class Player extends Phaser.GameObjects.Container {
       y: dashY,
       duration: 120,
       ease: 'Cubic.easeOut',
+      onUpdate: () => this.clampToLane(),
+      onComplete: () => this.clampToLane(),
     });
 
     // Brief i-frame flash
@@ -376,6 +387,20 @@ export default class Player extends Phaser.GameObjects.Container {
       yoyo: true,
       repeat: 1,
     });
+  }
+
+  private clampToLane() {
+    const clampedY = Phaser.Math.Clamp(this.y, LANE_BOUNDS.PLAYER_MIN_Y, LANE_BOUNDS.PLAYER_MAX_Y);
+    if (clampedY !== this.y) {
+      this.y = clampedY;
+      const body = this.body as Phaser.Physics.Arcade.Body;
+      if (
+        (clampedY === LANE_BOUNDS.PLAYER_MIN_Y && body.velocity.y < 0) ||
+        (clampedY === LANE_BOUNDS.PLAYER_MAX_Y && body.velocity.y > 0)
+      ) {
+        body.setVelocityY(0);
+      }
+    }
   }
 
   private castFeedback(color: number) {

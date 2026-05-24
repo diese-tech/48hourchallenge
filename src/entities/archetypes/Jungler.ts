@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import Teammate from '../Teammate';
 import type { TeammateConfig } from '../Teammate';
-import { ASSETS, COLORS, SIZES, GAME_WIDTH, GROUND_Y, BALANCE } from '../../constants';
+import { ASSETS, COLORS, SIZES, GAME_WIDTH, GROUND_Y, BALANCE, LANE_BOUNDS } from '../../constants';
 
 const CONFIG: TeammateConfig = {
   key: 'nyx',
@@ -106,6 +106,7 @@ export default class Jungler extends Teammate {
   update(delta: number, enemies: any[], playerX: number, playerY: number) {
     if (this.isDashing) {
       (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+      this.clampToLane();
       return;
     }
 
@@ -166,7 +167,7 @@ export default class Jungler extends Teammate {
       GAME_WIDTH * 0.24,
       maxDiveX
     );
-    const dashTargetY = Phaser.Math.Clamp(nearest.y, GROUND_Y - 36, GROUND_Y + 28);
+    const dashTargetY = Phaser.Math.Clamp(nearest.y, LANE_BOUNDS.ALLY_MIN_Y, LANE_BOUNDS.ALLY_MAX_Y);
 
     const trail = this.scene.add.graphics();
     trail.lineStyle(4, COLORS.JUNGLER_TRAIL, 0.85);
@@ -182,6 +183,7 @@ export default class Jungler extends Teammate {
       y: dashTargetY,
       duration: 130,
       ease: 'Cubic.easeOut',
+      onUpdate: () => this.clampToLane(),
       onComplete: () => {
         const hitDist = Phaser.Math.Distance.Between(this.x, this.y, nearest.x, nearest.y);
         if (nearest.active && hitDist <= this.config.attackRange + 70) {
@@ -212,7 +214,11 @@ export default class Jungler extends Teammate {
         });
 
         this.targetRoamX = Phaser.Math.Clamp(this.x - 160, GAME_WIDTH * 0.12, GAME_WIDTH * 0.42);
-        this.targetRoamY = GROUND_Y + Phaser.Math.Between(-22, 18);
+        this.targetRoamY = Phaser.Math.Clamp(
+          GROUND_Y + Phaser.Math.Between(-22, 18),
+          LANE_BOUNDS.ALLY_MIN_Y,
+          LANE_BOUNDS.ALLY_MAX_Y
+        );
         this.config.zoneX = this.targetRoamX;
         this.config.zoneY = this.targetRoamY;
 
@@ -222,7 +228,9 @@ export default class Jungler extends Teammate {
           y: this.targetRoamY,
           duration: 230,
           ease: 'Cubic.easeOut',
+          onUpdate: () => this.clampToLane(),
           onComplete: () => {
+            this.clampToLane();
             this.isDashing = false;
           },
         });
@@ -241,6 +249,6 @@ export default class Jungler extends Teammate {
     ];
     const pick = options[Math.floor(Math.random() * options.length)];
     this.targetRoamX = pick.x;
-    this.targetRoamY = pick.y;
+    this.targetRoamY = Phaser.Math.Clamp(pick.y, LANE_BOUNDS.ALLY_MIN_Y, LANE_BOUNDS.ALLY_MAX_Y);
   }
 }
