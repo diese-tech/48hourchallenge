@@ -2,7 +2,7 @@
   "id": "FEAT-002",
   "type": "feat",
   "description": "Core gameplay rescue: Fix abilities, ally combat, 4-minute win loop, player health/targeting, balance, and readability. This is a single large feature covering all gameplay fixes needed for the challenge submission.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "STEP 1 - BALANCE CONSTANTS (src/constants.ts): Change TIMING.DAY_DURATION_MS from 6*60*1000 to 4*60*1000 (240000). Give Solo higher HP: add SOLO_MAX_HP: 350 to BALANCE. Reduce TEAMMATE_MAX_HP to 180 (general pool). Reduce ADC HP: add ADC_MAX_HP: 130. Add JUNGLER_DASH_INTERVAL_MS: 4000 and JUNGLER_DASH_DISTANCE: 150 to BALANCE. Reduce GRUNT_DMG from 12 to 8. Reduce HARASSER_DMG from 10 to 7. Reduce ASSASSIN_DMG from 18 to 14. Reduce GRUNT_SPEED from 90 to 75. Reduce ASSASSIN_SPEED from 200 to 160. Reduce HEAL_COOLDOWN_MS from 4000 to 3000. Reduce SHIELD_COOLDOWN_MS from 6000 to 4500. Reduce DASH_COOLDOWN_MS from 5000 to 3500. Reduce INTERCEPT_COOLDOWN_MS from 8000 to 6000. Increase SHIELD_AMOUNT from 60 to 80. Increase MAX_ENEMIES from 20 to 25. Reduce SHINE_INTERVAL_MIN_MS from 35000 to 20000 and SHINE_INTERVAL_MAX_MS from 50000 to 35000.",
 
@@ -54,5 +54,5 @@
     "Run `cd /projects/sandbox/48hourchallenge && npx vite build` - must exit 0"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "All 15 steps implemented in a single pass. TypeScript compiles cleanly (npx tsc --noEmit exits 0). Vite build succeeds (npx vite build exits 0). The Teammate import in UI.ts was changed to import type since it is only used in type positions. The Phaser chunk warning about >500KB is pre-existing (Phaser is a large library). No test failures since no test framework exists."
 }
