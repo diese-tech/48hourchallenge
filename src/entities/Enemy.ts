@@ -78,17 +78,21 @@ export default class Enemy extends Phaser.GameObjects.Container {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected getTarget(teammates: any[], _shineTarget?: any): any | null {
+  protected getTarget(teammates: any[], _shineTarget?: any, player?: any): any | null {
+    // 20% chance to target the player
+    if (player && player.hp > 0 && Math.random() < 0.2) {
+      return player;
+    }
     return this.findNearest(teammates);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  update(delta: number, teammates: any[], shineTarget?: any) {
+  update(delta: number, teammates: any[], shineTarget?: any, player?: any) {
     if (!this.active) return;
 
     this.attackTimer = Math.max(0, this.attackTimer - delta);
 
-    const target = this.getTarget(teammates, shineTarget);
+    const target = this.getTarget(teammates, shineTarget, player);
     if (!target) return;
 
     const tx = target.x;

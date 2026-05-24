@@ -85,7 +85,7 @@ export default class WaveSystem {
 
       case 'LULL':
         this.lullTimer += delta;
-        if (this.lullTimer >= 4000) {
+        if (this.lullTimer >= 3000) {
           this.nextWave();
         }
         break;

@@ -6,6 +6,7 @@ interface GameOverData {
   level: number;
   isNight: boolean;
   blessings: string[];
+  victory?: boolean;
 }
 
 export default class GameOver extends Phaser.Scene {
@@ -14,7 +15,7 @@ export default class GameOver extends Phaser.Scene {
   }
 
   create(data: GameOverData) {
-    const { wave, level, isNight, blessings } = data;
+    const { wave, level, isNight, blessings, victory } = data;
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
 
@@ -29,11 +30,14 @@ export default class GameOver extends Phaser.Scene {
     vig.setDepth(0);
 
     // Title
-    const titleText = isNight ? 'THE NIGHT CLAIMS ALL' : 'YOUR TEAM FELL';
+    const titleText = victory
+      ? 'ENDLESS MODE COMPLETE'
+      : isNight ? 'THE NIGHT CLAIMS ALL' : 'YOUR TEAM FELL';
+    const titleColor = victory ? '#ffd700' : '#cc2244';
     this.add.text(cx, cy - 170, titleText, {
       fontFamily: 'monospace',
       fontSize: '42px',
-      color: '#cc2244',
+      color: titleColor,
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 4,
@@ -53,7 +57,9 @@ export default class GameOver extends Phaser.Scene {
       `Survived to Wave ${wave}`,
       `Reached Level ${level}`,
       `Blessings chosen: ${blessings.length}`,
-      isNight ? 'You faced the night.' : 'The day was not enough.',
+      victory
+        ? 'You achieved victory and survived endless mode!'
+        : isNight ? 'You faced the night.' : 'The day was not enough.',
     ];
 
     stats.forEach((s, i) => {

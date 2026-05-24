@@ -63,7 +63,7 @@ export default class Assassin extends Enemy {
 
   // Assassins lock onto the Shine State target, ignore all others
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected getTarget(teammates: any[], shineTarget?: any): any | null {
+  protected getTarget(teammates: any[], shineTarget?: any, _player?: any): any | null {
     if (shineTarget && (shineTarget as any).active && (shineTarget as any).state !== 'DEAD') {
       return shineTarget;
     }

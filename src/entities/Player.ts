@@ -12,6 +12,9 @@ export default class Player extends Phaser.GameObjects.Container {
   hp: number = BALANCE.PLAYER_MAX_HP;
   maxHp: number = BALANCE.PLAYER_MAX_HP;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  teammates: any[] = [];
+
   // Cooldowns (ms remaining)
   cooldowns: Record<string, number> = {
     heal: 0,
@@ -22,6 +25,7 @@ export default class Player extends Phaser.GameObjects.Container {
 
   private graphic!: Phaser.GameObjects.Graphics;
   private glowGraphic!: Phaser.GameObjects.Graphics;
+  private hpBar!: Phaser.GameObjects.Graphics;
   private keys!: {
     up: Phaser.Input.Keyboard.Key;
     down: Phaser.Input.Keyboard.Key;
@@ -56,7 +60,11 @@ export default class Player extends Phaser.GameObjects.Container {
     this.graphic = this.scene.add.graphics();
     this.add(this.graphic);
 
+    this.hpBar = this.scene.add.graphics();
+    this.add(this.hpBar);
+
     this.drawShape();
+    this.updateHpBar();
 
     // Gentle float above ground
     this.scene.tweens.add({
@@ -261,12 +269,33 @@ export default class Player extends Phaser.GameObjects.Container {
 
   private performDash() {
     const body = this.body as Phaser.Physics.Arcade.Body;
-    const vx = body.velocity.x;
-    const vy = body.velocity.y;
-    const len = Math.sqrt(vx * vx + vy * vy) || 1;
 
-    const dashX = this.x + (vx / len) * 120;
-    const dashY = this.y + (vy / len) * 120;
+    // Find lowest-HP alive teammate
+    const alive = this.teammates.filter(
+      (t: any) => t.active && t.state !== 'DEAD'
+    );
+    alive.sort((a: any, b: any) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
+
+    let dashX: number;
+    let dashY: number;
+
+    if (alive.length > 0) {
+      const target = alive[0];
+      const dx = target.x - this.x;
+      const dy = target.y - this.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const maxDist = 180;
+      const clampedDist = Math.min(dist, maxDist);
+      dashX = this.x + (dx / dist) * clampedDist;
+      dashY = this.y + (dy / dist) * clampedDist;
+    } else {
+      // Fallback: movement-direction dash
+      const vx = body.velocity.x;
+      const vy = body.velocity.y;
+      const len = Math.sqrt(vx * vx + vy * vy) || 1;
+      dashX = this.x + (vx / len) * 120;
+      dashY = this.y + (vy / len) * 120;
+    }
 
     this.scene.tweens.add({
       targets: this,
@@ -312,6 +341,7 @@ export default class Player extends Phaser.GameObjects.Container {
   takeDamage(amount: number) {
     this.hp = Math.max(0, this.hp - amount);
     EventBus.emit(EVENTS.PLAYER_DAMAGED, { hp: this.hp, maxHp: this.maxHp });
+    this.updateHpBar();
 
     this.scene.tweens.add({
       targets: this.graphic,
@@ -320,6 +350,36 @@ export default class Player extends Phaser.GameObjects.Container {
       yoyo: true,
       repeat: 2,
     });
+
+    if (this.hp <= 0) {
+      EventBus.emit(EVENTS.PLAYER_DIED);
+    }
+  }
+
+  private updateHpBar() {
+    const g = this.hpBar;
+    const s = SIZES.PLAYER;
+    const width = s * 3;
+    const height = 4;
+    const x = -(s * 1.5);
+    const y = -(s * 5.5);
+
+    g.clear();
+    g.fillStyle(0x222233, 1);
+    g.fillRect(x, y, width, height);
+
+    const frac = Phaser.Math.Clamp(this.hp / this.maxHp, 0, 1);
+    const fillWidth = frac > 0 ? Math.max(2, width * frac) : 0;
+    const color = frac > 0.5
+      ? COLORS.HEALTH_HIGH
+      : frac > 0.25
+        ? COLORS.HEALTH_MID
+        : COLORS.HEALTH_LOW;
+
+    if (fillWidth > 0) {
+      g.fillStyle(color, 1);
+      g.fillRect(x, y, fillWidth, height);
+    }
   }
 
   enterUpgradeMenu() {
