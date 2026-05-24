@@ -88,12 +88,14 @@ export const SIZES = {
 export const BALANCE = {
   PLAYER_SPEED: 240,
   PLAYER_MAX_HP: 100,
+  PLAYER_REGEN_DELAY_MS: 2500,
+  PLAYER_REGEN_PER_SECOND: 5,
   TEAMMATE_MAX_HP: 180,
   SOLO_MAX_HP: 350,
   ADC_MAX_HP: 130,
-  HEAL_AMOUNT: 50,
+  HEAL_AMOUNT: 60,
   HEAL_COOLDOWN_MS: 3000,
-  SHIELD_AMOUNT: 80,
+  SHIELD_AMOUNT: 90,
   SHIELD_COOLDOWN_MS: 4500,
   DASH_COOLDOWN_MS: 3500,
   INTERCEPT_COOLDOWN_MS: 6000,
@@ -115,8 +117,8 @@ export const BALANCE = {
   ASSASSIN_SPEED: 160,
   CRITICAL_HP_THRESHOLD: 0.25,
   MAX_ENEMIES: 25,
-  JUNGLER_DASH_INTERVAL_MS: 4000,
-  JUNGLER_DASH_DISTANCE: 150,
+  JUNGLER_DASH_INTERVAL_MS: 2800,
+  JUNGLER_DASH_DISTANCE: 360,
 };
 
 // Ground line Y — characters stand here (side-scrolling brawler perspective)
@@ -135,11 +137,19 @@ export const FORMATION = {
   MID_Y: GROUND_Y + 4,
 };
 
-// Asset keys (swap these to real sprite keys in Phase 2)
+// Asset keys. Cropped character PNGs are generated from the provided contact sheet.
 export const ASSETS = {
   // Fonts
   FONT_MONO: 'monospace',
   FONT_DISPLAY: 'monospace',
+  SUPPORT: 'support',
+  SOLO: 'arthur',
+  ADC: 'lyria',
+  MID: 'vorax',
+  JUNGLER: 'nyx',
+  GRUNT: 'grunt',
+  HARASSER: 'harasser',
+  ASSASSIN: 'assassin',
 };
 
 // Events

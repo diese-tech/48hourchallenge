@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
-import { AUDIO } from '../constants';
+import { ASSETS, AUDIO } from '../constants';
 
-const SILENT_WAV_DATA_URI = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=';
+const SILENT_WAV_DATA_URI = 'data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQIAAAAAAA==';
 
 export default class Boot extends Phaser.Scene {
   constructor() {
@@ -14,6 +14,15 @@ export default class Boot extends Phaser.Scene {
     // Example:
     //   this.load.spritesheet(ASSETS.SOLO_SHEET, 'assets/solo.png', { frameWidth: 64, frameHeight: 64 });
     //   this.load.audio(ASSETS.SHINE_QUIP_SOLO, 'assets/audio/solo_shine.mp3');
+
+    this.load.image(ASSETS.SUPPORT, 'assets/sprites/support.png');
+    this.load.image(ASSETS.SOLO, 'assets/sprites/arthur.png');
+    this.load.image(ASSETS.ADC, 'assets/sprites/lyria.png');
+    this.load.image(ASSETS.MID, 'assets/sprites/vorax.png');
+    this.load.image(ASSETS.JUNGLER, 'assets/sprites/nyx.png');
+    this.load.image(ASSETS.GRUNT, 'assets/sprites/grunt.png');
+    this.load.image(ASSETS.HARASSER, 'assets/sprites/harasser.png');
+    this.load.image(ASSETS.ASSASSIN, 'assets/sprites/assassin.png');
 
     for (const key of Object.values(AUDIO)) {
       this.load.audio(key, SILENT_WAV_DATA_URI);

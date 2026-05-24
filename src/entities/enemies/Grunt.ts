@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import Enemy from '../Enemy';
 import type { EnemyConfig } from '../Enemy';
-import { COLORS, SIZES, BALANCE } from '../../constants';
+import { ASSETS, COLORS, SIZES, BALANCE } from '../../constants';
 
 const CONFIG: EnemyConfig = {
   key: 'grunt',
@@ -21,7 +21,11 @@ export default class Grunt extends Enemy {
   }
 
   drawShape() {
-    const g = this.graphic;
+    if (this.useSpriteVisual(ASSETS.GRUNT, this.config.size * 4.3, this.config.size * 0.2)) {
+      return;
+    }
+
+    const g = this.graphic as Phaser.GameObjects.Graphics;
     g.clear();
     const s = this.config.size;
 

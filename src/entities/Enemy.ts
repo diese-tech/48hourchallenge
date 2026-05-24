@@ -26,7 +26,7 @@ export default class Enemy extends Phaser.GameObjects.Container {
   active: boolean = true;
   type: EnemyType;
 
-  protected graphic!: Phaser.GameObjects.Graphics;
+  protected graphic!: Phaser.GameObjects.Graphics | Phaser.GameObjects.Image;
   protected hpBar!: Phaser.GameObjects.Graphics;
   protected attackTimer: number = 0;
 
@@ -56,6 +56,9 @@ export default class Enemy extends Phaser.GameObjects.Container {
       speed: Math.round(this.config.speed * speedMultiplier),
     };
     this.drawShape();
+    if (this.graphic instanceof Phaser.GameObjects.Image) {
+      this.graphic.setTint(tint);
+    }
     this.updateHpBar();
   }
 
@@ -70,11 +73,32 @@ export default class Enemy extends Phaser.GameObjects.Container {
   }
 
   drawShape() {
-    const g = this.graphic;
+    const g = this.graphic as Phaser.GameObjects.Graphics;
     g.setAlpha(1);
     g.clear();
     g.fillStyle(this.config.color, 1);
     g.fillCircle(0, 0, this.config.size);
+  }
+
+  protected useSpriteVisual(assetKey: string, displayHeight: number, yOffset: number = 0): boolean {
+    if (!this.scene.textures.exists(assetKey)) return false;
+
+    if (!(this.graphic instanceof Phaser.GameObjects.Image) || this.graphic.texture.key !== assetKey) {
+      const oldGraphic = this.graphic;
+      this.remove(oldGraphic, true);
+
+      const sprite = this.scene.add.image(0, yOffset, assetKey);
+      sprite.setOrigin(0.5, 1);
+      sprite.setAlpha(1);
+      this.graphic = sprite;
+      this.addAt(sprite, 0);
+    }
+
+    const sprite = this.graphic as Phaser.GameObjects.Image;
+    const scale = displayHeight / sprite.height;
+    sprite.setScale(-scale, scale);
+    sprite.setPosition(0, yOffset);
+    return true;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

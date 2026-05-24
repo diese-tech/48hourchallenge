@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, SIZES, BALANCE, EVENTS } from '../constants';
+import { ASSETS, COLORS, SIZES, BALANCE, EVENTS } from '../constants';
 import EventBus from '../events';
 
 export type PlayerState = 'FREE' | 'CASTING' | 'UPGRADE_MENU';
@@ -11,6 +11,8 @@ export default class Player extends Phaser.GameObjects.Container {
   state: PlayerState = 'FREE';
   hp: number = BALANCE.PLAYER_MAX_HP;
   maxHp: number = BALANCE.PLAYER_MAX_HP;
+  private timeSinceDamage: number = BALANCE.PLAYER_REGEN_DELAY_MS;
+  private regenFeedbackTimer: number = 0;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   teammates: any[] = [];
@@ -23,7 +25,7 @@ export default class Player extends Phaser.GameObjects.Container {
     intercept: 0,
   };
 
-  private graphic!: Phaser.GameObjects.Graphics;
+  private graphic!: Phaser.GameObjects.Graphics | Phaser.GameObjects.Image;
   private glowGraphic!: Phaser.GameObjects.Graphics;
   private hpBar!: Phaser.GameObjects.Graphics;
   private keys!: {
@@ -103,7 +105,11 @@ export default class Player extends Phaser.GameObjects.Container {
   }
 
   drawShape() {
-    const g = this.graphic;
+    if (this.useSpriteVisual(ASSETS.SUPPORT, SIZES.PLAYER * 4.9, SIZES.PLAYER * 0.4)) {
+      return;
+    }
+
+    const g = this.graphic as Phaser.GameObjects.Graphics;
     g.clear();
     const s = SIZES.PLAYER;
 
@@ -177,6 +183,28 @@ export default class Player extends Phaser.GameObjects.Container {
     g.fillPath();
   }
 
+  private useSpriteVisual(assetKey: string, displayHeight: number, yOffset: number = 0): boolean {
+    if (!this.scene.textures.exists(assetKey)) return false;
+
+    if (!(this.graphic instanceof Phaser.GameObjects.Image) || this.graphic.texture.key !== assetKey) {
+      const oldGraphic = this.graphic;
+      this.remove(oldGraphic, true);
+
+      const sprite = this.scene.add.image(0, yOffset, assetKey);
+      sprite.setOrigin(0.5, 1);
+      sprite.setAlpha(1);
+      this.graphic = sprite;
+      this.addAt(sprite, 1);
+    }
+
+    const sprite = this.graphic as Phaser.GameObjects.Image;
+    const scale = displayHeight / sprite.height;
+    sprite.setScale(scale);
+    sprite.setPosition(0, yOffset);
+    sprite.clearTint();
+    return true;
+  }
+
   setupKeys() {
     const kb = this.scene.input.keyboard!;
     this.keys = {
@@ -210,7 +238,42 @@ export default class Player extends Phaser.GameObjects.Container {
       }
     }
 
+    this.updatePassiveRegen(delta);
     this.handleMovement();
+  }
+
+  private updatePassiveRegen(delta: number) {
+    if (this.hp <= 0 || this.hp >= this.maxHp) {
+      this.timeSinceDamage += delta;
+      return;
+    }
+
+    this.timeSinceDamage += delta;
+    if (this.timeSinceDamage < BALANCE.PLAYER_REGEN_DELAY_MS) return;
+
+    const regenAmount = BALANCE.PLAYER_REGEN_PER_SECOND * (delta / 1000);
+    this.hp = Math.min(this.maxHp, this.hp + regenAmount);
+    this.updateHpBar();
+    EventBus.emit(EVENTS.PLAYER_DAMAGED, { hp: this.hp, maxHp: this.maxHp });
+
+    this.regenFeedbackTimer -= delta;
+    if (this.regenFeedbackTimer <= 0) {
+      this.regenFeedbackTimer = 350;
+      const mote = this.scene.add.graphics();
+      mote.fillStyle(COLORS.HEAL_PARTICLE, 0.75);
+      mote.fillCircle(0, 0, 3);
+      mote.setPosition(this.x + Phaser.Math.Between(-12, 12), this.y - SIZES.PLAYER * 2.4);
+      mote.setDepth(14);
+      mote.setBlendMode(Phaser.BlendModes.ADD);
+      this.scene.tweens.add({
+        targets: mote,
+        y: mote.y - 22,
+        alpha: 0,
+        duration: 450,
+        ease: 'Cubic.easeOut',
+        onComplete: () => mote.destroy(),
+      });
+    }
   }
 
   private handleMovement() {
@@ -340,6 +403,8 @@ export default class Player extends Phaser.GameObjects.Container {
 
   takeDamage(amount: number) {
     this.hp = Math.max(0, this.hp - amount);
+    this.timeSinceDamage = 0;
+    this.regenFeedbackTimer = 0;
     EventBus.emit(EVENTS.PLAYER_DAMAGED, { hp: this.hp, maxHp: this.maxHp });
     this.updateHpBar();
 

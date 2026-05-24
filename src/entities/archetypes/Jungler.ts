@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import Teammate from '../Teammate';
 import type { TeammateConfig } from '../Teammate';
-import { COLORS, SIZES, GAME_WIDTH, GROUND_Y, BALANCE } from '../../constants';
+import { ASSETS, COLORS, SIZES, GAME_WIDTH, GROUND_Y, BALANCE } from '../../constants';
 
 const CONFIG: TeammateConfig = {
   key: 'nyx',
@@ -9,31 +9,35 @@ const CONFIG: TeammateConfig = {
   color: COLORS.JUNGLER,
   shineColor: COLORS.JUNGLER_TRAIL,
   size: SIZES.JUNGLER,
-  speed: 210,
-  attackRange: 80,
-  aggroRange: 360,
-  damage: 22,
-  attackRate: 750,
-  zoneX: -60,
+  speed: 235,
+  attackRange: 90,
+  aggroRange: 760,
+  damage: 24,
+  attackRate: 680,
+  zoneX: GAME_WIDTH * 0.12,
   zoneY: GROUND_Y,
   zoneRadius: 300,
 };
 
 export default class Jungler extends Teammate {
   private roamTimer: number = 0;
-  private roamInterval: number = 3500;
-  private targetRoamX: number = -60;
+  private roamInterval: number = 2200;
+  private targetRoamX: number = GAME_WIDTH * 0.12;
   private targetRoamY: number = GROUND_Y;
-  private dashSlashTimer: number = 0;
+  private dashSlashTimer: number = BALANCE.JUNGLER_DASH_INTERVAL_MS - 900;
   private isDashing: boolean = false;
 
   constructor(scene: Phaser.Scene) {
-    super(scene, -60, GROUND_Y, CONFIG);
-    this.roamTimer = Math.random() * 2000;
+    super(scene, CONFIG.zoneX, GROUND_Y, CONFIG);
+    this.roamTimer = this.roamInterval - 700;
   }
 
   drawShape() {
-    const g = this.graphic;
+    if (this.useSpriteVisual(ASSETS.JUNGLER, this.config.size * 4.8, this.config.size * 0.3)) {
+      return;
+    }
+
+    const g = this.graphic as Phaser.GameObjects.Graphics;
     g.clear();
     const s = this.config.size;
 
@@ -100,11 +104,16 @@ export default class Jungler extends Teammate {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   update(delta: number, enemies: any[], playerX: number, playerY: number) {
+    if (this.isDashing) {
+      (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+      return;
+    }
+
     this.roamTimer += delta;
 
     if (this.roamTimer >= this.roamInterval) {
       this.roamTimer = 0;
-      this.roamInterval = 2500 + Math.random() * 3500;
+      this.roamInterval = 1600 + Math.random() * 2200;
       this.pickNewRoamTarget();
     }
 
@@ -127,6 +136,7 @@ export default class Jungler extends Teammate {
       if (inRange.length > 0) {
         this.dashSlashTimer = 0;
         this.performDashSlash(inRange);
+        return;
       }
     }
 
@@ -150,55 +160,67 @@ export default class Jungler extends Teammate {
 
     const startX = this.x;
     const startY = this.y;
+    const maxDiveX = GAME_WIDTH * 0.78;
+    const dashTargetX = Phaser.Math.Clamp(
+      Math.min(nearest.x - 35, this.x + BALANCE.JUNGLER_DASH_DISTANCE),
+      GAME_WIDTH * 0.24,
+      maxDiveX
+    );
+    const dashTargetY = Phaser.Math.Clamp(nearest.y, GROUND_Y - 36, GROUND_Y + 28);
 
-    // Create trail line
     const trail = this.scene.add.graphics();
-    trail.setDepth(3);
+    trail.lineStyle(4, COLORS.JUNGLER_TRAIL, 0.85);
+    trail.lineBetween(startX, startY - this.config.size * 1.8, dashTargetX, dashTargetY - this.config.size * 1.8);
+    trail.fillStyle(COLORS.JUNGLER_SHADOW, 0.35);
+    trail.fillCircle(startX, startY - this.config.size * 1.5, this.config.size * 1.8);
+    trail.setDepth(7);
+    trail.setBlendMode(Phaser.BlendModes.ADD);
 
-    // Tween toward enemy
     this.scene.tweens.add({
       targets: this,
-      x: nearest.x,
-      y: nearest.y,
-      duration: 150,
-      ease: 'Cubic.easeIn',
+      x: dashTargetX,
+      y: dashTargetY,
+      duration: 130,
+      ease: 'Cubic.easeOut',
       onComplete: () => {
-        // Deal bonus damage directly
-        const bonusDmg = this.config.damage * 0.5;
-        nearest.takeDamage(bonusDmg);
+        const hitDist = Phaser.Math.Distance.Between(this.x, this.y, nearest.x, nearest.y);
+        if (nearest.active && hitDist <= this.config.attackRange + 70) {
+          nearest.takeDamage(this.config.damage * 0.75);
+        }
 
-        // Draw trail from start to current
-        trail.lineStyle(2, COLORS.JUNGLER_TRAIL, 0.8);
-        trail.lineBetween(startX, startY, this.x, this.y);
-
-        // Fade trail
         this.scene.tweens.add({
           targets: trail,
           alpha: 0,
-          duration: 300,
+          duration: 360,
           onComplete: () => trail.destroy(),
         });
 
-        // Slash arc graphic
         const slash = this.scene.add.graphics();
-        slash.lineStyle(3, COLORS.JUNGLER, 0.9);
+        slash.lineStyle(4, COLORS.JUNGLER_TRAIL, 1);
         slash.beginPath();
-        slash.arc(this.x, this.y, this.config.size + 10, 0, Math.PI, false);
+        slash.arc(this.x, this.y - this.config.size * 1.4, this.config.size + 22, -0.3, Math.PI + 0.7, false);
         slash.strokePath();
-        slash.setDepth(7);
+        slash.setDepth(10);
+        slash.setBlendMode(Phaser.BlendModes.ADD);
         this.scene.tweens.add({
           targets: slash,
+          scaleX: 1.8,
+          scaleY: 1.8,
           alpha: 0,
-          duration: 300,
+          duration: 260,
           onComplete: () => slash.destroy(),
         });
 
-        // Tween back toward zone
+        this.targetRoamX = Phaser.Math.Clamp(this.x - 160, GAME_WIDTH * 0.12, GAME_WIDTH * 0.42);
+        this.targetRoamY = GROUND_Y + Phaser.Math.Between(-22, 18);
+        this.config.zoneX = this.targetRoamX;
+        this.config.zoneY = this.targetRoamY;
+
         this.scene.tweens.add({
           targets: this,
           x: this.targetRoamX,
           y: this.targetRoamY,
-          duration: 200,
+          duration: 230,
           ease: 'Cubic.easeOut',
           onComplete: () => {
             this.isDashing = false;
@@ -211,11 +233,11 @@ export default class Jungler extends Teammate {
   private pickNewRoamTarget() {
     const gy = GROUND_Y;
     const options = [
-      { x: -50, y: gy },
-      { x: GAME_WIDTH * 0.08, y: gy + Math.random() * 30 - 15 },
-      { x: GAME_WIDTH * 0.22, y: gy + Math.random() * 30 - 15 },
-      { x: GAME_WIDTH * 0.35, y: gy + Math.random() * 30 - 15 },
-      { x: -50, y: gy + Math.random() * 40 - 20 },
+      { x: GAME_WIDTH * 0.10, y: gy + Math.random() * 30 - 15 },
+      { x: GAME_WIDTH * 0.18, y: gy + Math.random() * 34 - 17 },
+      { x: GAME_WIDTH * 0.28, y: gy + Math.random() * 36 - 18 },
+      { x: GAME_WIDTH * 0.38, y: gy + Math.random() * 34 - 17 },
+      { x: GAME_WIDTH * 0.46, y: gy + Math.random() * 30 - 15 },
     ];
     const pick = options[Math.floor(Math.random() * options.length)];
     this.targetRoamX = pick.x;
