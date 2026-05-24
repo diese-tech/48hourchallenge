@@ -32,7 +32,7 @@ export default class Teammate extends Phaser.GameObjects.Container {
   shield: number = 0;
   shineActive: boolean = false;
 
-  protected graphic!: Phaser.GameObjects.Graphics;
+  protected graphic!: Phaser.GameObjects.Graphics | Phaser.GameObjects.Image;
   protected hpBar!: Phaser.GameObjects.Graphics;
   protected glowGraphic!: Phaser.GameObjects.Graphics;
   protected shieldGraphic!: Phaser.GameObjects.Graphics;
@@ -83,10 +83,32 @@ export default class Teammate extends Phaser.GameObjects.Container {
   }
 
   drawShape() {
-    const g = this.graphic;
+    const g = this.graphic as Phaser.GameObjects.Graphics;
     g.clear();
     g.fillStyle(this.config.color, 1);
     g.fillCircle(0, 0, this.config.size);
+  }
+
+  protected useSpriteVisual(assetKey: string, displayHeight: number, yOffset: number = 0): boolean {
+    if (!this.scene.textures.exists(assetKey)) return false;
+
+    if (!(this.graphic instanceof Phaser.GameObjects.Image) || this.graphic.texture.key !== assetKey) {
+      const oldGraphic = this.graphic;
+      this.remove(oldGraphic, true);
+
+      const sprite = this.scene.add.image(0, yOffset, assetKey);
+      sprite.setOrigin(0.5, 1);
+      sprite.setAlpha(1);
+      this.graphic = sprite;
+      this.addAt(sprite, 1);
+    }
+
+    const sprite = this.graphic as Phaser.GameObjects.Image;
+    const scale = displayHeight / sprite.height;
+    sprite.setScale(scale);
+    sprite.setPosition(0, yOffset);
+    sprite.clearTint();
+    return true;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

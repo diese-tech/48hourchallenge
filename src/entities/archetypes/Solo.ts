@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import Teammate from '../Teammate';
 import type { TeammateConfig } from '../Teammate';
-import { COLORS, SIZES, GAME_WIDTH, GROUND_Y, BALANCE } from '../../constants';
+import { ASSETS, COLORS, SIZES, GAME_WIDTH, GROUND_Y, BALANCE } from '../../constants';
 
 const CONFIG: TeammateConfig = {
   key: 'arthur',
@@ -28,7 +28,11 @@ export default class Solo extends Teammate {
   }
 
   drawShape() {
-    const g = this.graphic;
+    if (this.useSpriteVisual(ASSETS.SOLO, this.config.size * 4.9, this.config.size * 0.2)) {
+      return;
+    }
+
+    const g = this.graphic as Phaser.GameObjects.Graphics;
     g.clear();
     const s = this.config.size;
 

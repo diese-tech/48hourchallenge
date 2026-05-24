@@ -34,6 +34,13 @@ export default class WaveSystem {
   }
 
   nextWave() {
+    if (!this.isNightMode && this.waveNumber >= DAY_WAVES.length) {
+      this.spawnQueue = [];
+      this.spawnTimer = 0;
+      this.state = 'IDLE';
+      return;
+    }
+
     this.waveNumber++;
     const def = this.getWaveDef(this.waveNumber);
     this.currentWaveDef = def;

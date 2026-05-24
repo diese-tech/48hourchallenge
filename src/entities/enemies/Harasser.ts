@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import Enemy from '../Enemy';
 import type { EnemyConfig } from '../Enemy';
-import { COLORS, SIZES, BALANCE } from '../../constants';
+import { ASSETS, COLORS, SIZES, BALANCE } from '../../constants';
 
 const CONFIG: EnemyConfig = {
   key: 'harasser',
@@ -21,7 +21,11 @@ export default class Harasser extends Enemy {
   }
 
   drawShape() {
-    const g = this.graphic;
+    if (this.useSpriteVisual(ASSETS.HARASSER, this.config.size * 4.2, this.config.size * 0.2)) {
+      return;
+    }
+
+    const g = this.graphic as Phaser.GameObjects.Graphics;
     g.clear();
     const s = this.config.size;
 

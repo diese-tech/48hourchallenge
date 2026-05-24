@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import Teammate from '../Teammate';
 import type { TeammateConfig } from '../Teammate';
-import { COLORS, SIZES, GAME_WIDTH, GROUND_Y, BALANCE } from '../../constants';
+import { ASSETS, COLORS, SIZES, GAME_WIDTH, GROUND_Y, BALANCE } from '../../constants';
 import EventBus from '../../events';
 
 const CONFIG: TeammateConfig = {
@@ -10,11 +10,11 @@ const CONFIG: TeammateConfig = {
   color: COLORS.ADC,
   shineColor: COLORS.ADC_BOLT,
   size: SIZES.ADC,
-  speed: 140,
-  attackRange: 210,
-  aggroRange: 290,
-  damage: 14,
-  attackRate: 500,
+  speed: 115,
+  attackRange: 520,
+  aggroRange: 640,
+  damage: 15,
+  attackRate: 460,
   zoneX: GAME_WIDTH * 0.29,
   zoneY: GROUND_Y - 8,
   zoneRadius: 110,
@@ -45,8 +45,10 @@ export default class ADC extends Teammate {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private spawnProjectile(target: any) {
     const bolt = this.scene.add.graphics();
-    bolt.fillStyle(COLORS.ADC_BOLT, 0.9);
-    bolt.fillCircle(0, 0, 3);
+    bolt.lineStyle(2, COLORS.ADC_BOLT, 0.9);
+    bolt.lineBetween(-8, 0, 8, 0);
+    bolt.fillStyle(COLORS.ADC_BOLT, 0.95);
+    bolt.fillCircle(8, 0, 3);
     bolt.setPosition(this.x, this.y - this.config.size * 1.5);
     bolt.setDepth(8);
 
@@ -77,7 +79,11 @@ export default class ADC extends Teammate {
   }
 
   drawShape() {
-    const g = this.graphic;
+    if (this.useSpriteVisual(ASSETS.ADC, this.config.size * 5.0, this.config.size * 0.25)) {
+      return;
+    }
+
+    const g = this.graphic as Phaser.GameObjects.Graphics;
     g.clear();
     const s = this.config.size;
 
