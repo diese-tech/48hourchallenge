@@ -1,0 +1,58 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Core gameplay rescue: Fix abilities, ally combat, 4-minute win loop, player health/targeting, balance, and readability. This is a single large feature covering all gameplay fixes needed for the challenge submission.",
+  "status": "pending",
+  "steps": [
+    "STEP 1 - BALANCE CONSTANTS (src/constants.ts): Change TIMING.DAY_DURATION_MS from 6*60*1000 to 4*60*1000 (240000). Give Solo higher HP: add SOLO_MAX_HP: 350 to BALANCE. Reduce TEAMMATE_MAX_HP to 180 (general pool). Reduce ADC HP: add ADC_MAX_HP: 130. Add JUNGLER_DASH_INTERVAL_MS: 4000 and JUNGLER_DASH_DISTANCE: 150 to BALANCE. Reduce GRUNT_DMG from 12 to 8. Reduce HARASSER_DMG from 10 to 7. Reduce ASSASSIN_DMG from 18 to 14. Reduce GRUNT_SPEED from 90 to 75. Reduce ASSASSIN_SPEED from 200 to 160. Reduce HEAL_COOLDOWN_MS from 4000 to 3000. Reduce SHIELD_COOLDOWN_MS from 6000 to 4500. Reduce DASH_COOLDOWN_MS from 5000 to 3500. Reduce INTERCEPT_COOLDOWN_MS from 8000 to 6000. Increase SHIELD_AMOUNT from 60 to 80. Increase MAX_ENEMIES from 20 to 25. Reduce SHINE_INTERVAL_MIN_MS from 35000 to 20000 and SHINE_INTERVAL_MAX_MS from 50000 to 35000.",
+
+    "STEP 2 - WAVE REBALANCING (src/data/waves.ts): Redesign DAY_WAVES for a 4-minute pacing. The game should have about 10-12 waves total in 4 minutes. Wave 1-2 (0:00-1:00): only grunts, low count (3-4 grunts), slow spawn. Wave 3-4 (1:00-2:00): introduce harassers, moderate grunts. Wave 5-7 (2:00-3:00): more harassers, first assassins. Wave 8-10 (3:00-4:00): full enemy mix, increasing pressure. Lull time between waves should be shorter (3000ms). After wave 10 (DAY_WAVES.length), the endless/night mode begins. Update getNightWave to start at wave 11+ with aggressive scaling.",
+
+    "STEP 3 - SHIELD SYSTEM FIX (src/entities/Teammate.ts): Make shield actually block damage. Add a `shield` number property (default 0) and `maxShield` property to the Teammate class. In `receiveShield(amount)`: set `this.shield = Math.min(this.shield + amount, amount)` and add a persistent shield visual (a cyan-tinted ring/arc graphic child drawn around the character that stays visible while shield > 0). In `takeDamage(amount)`: if `this.shield > 0`, absorb damage from shield first (reduce shield, remainder goes to HP). When shield is depleted or absorbs a hit, flash the shield ring. Update the shield visual in a method called after any shield change. Add a visible shield bar segment above the HP bar (thin line, different color COLORS.SHIELD_PARTICLE).",
+
+    "STEP 4 - REFLECT/INTERCEPT FIX (src/scenes/Game.ts): Change the intercept ability from a useless ring pulse into a 'Protective Pulse' that deals damage to all enemies within range 200 of the player and grants a small shield (30) to all allies within range 250. In resolveAbility('intercept'): iterate over waveSystem.getEnemies(), for any enemy within 200px of player, call enemy.takeDamage(25). For all live teammates within 250px, call teammate.receiveShield(30). Keep the visual ring pulse but make it larger and add a damage flash on affected enemies. Add floating 'PULSE' text feedback at player position.",
+
+    "STEP 5 - DASH FIX (src/entities/Player.ts): Change performDash() to dash toward the lowest-HP alive teammate instead of based on movement direction. Import EventBus if needed. The dash should: find the lowest-HP alive teammate (access via game scene's teammates array - emit an event or access scene directly). Tween the player toward that teammate's position (clamped to max dash distance 180px). If no alive teammates exist, fall back to movement-direction dash. Keep the i-frame flash visual.",
+
+    "STEP 6 - SOLO TANK STATS (src/entities/archetypes/Solo.ts): After calling super() in the constructor, override this.maxHp and this.hp to use BALANCE.SOLO_MAX_HP (350). Import BALANCE from constants. Also increase Solo's damage from 28 to 35 and reduce attackRate from 1000 to 900 (faster attacks) to make Solo feel like a tank that draws pressure.",
+
+    "STEP 7 - ADC GLASS CANNON (src/entities/archetypes/ADC.ts): After calling super() in the constructor, override this.maxHp and this.hp to use BALANCE.ADC_MAX_HP (130). Increase attack speed: change CONFIG.attackRate from 650 to 500. This makes ADC a fast-firing but fragile character.",
+
+    "STEP 8 - JUNGLER DASH/SLASH VISUAL (src/entities/archetypes/Jungler.ts): Add a periodic dash-slash behavior. Add a dashTimer property. In update(), increment dashTimer by delta. When dashTimer >= BALANCE.JUNGLER_DASH_INTERVAL_MS and there are enemies in aggroRange, perform a dash-slash: pick the nearest enemy, tween the Jungler quickly toward it (duration 150ms), deal bonus damage (config.damage * 0.5), create a green slash trail graphic (an arc or line from start to end position that fades out over 300ms), then tween back or continue normal behavior. Reset dashTimer after dash. The visual should clearly show the Jungler dashing forward with a green afterimage trail.",
+
+    "STEP 9 - PLAYER TARGETABILITY AND HEALTH BAR (src/entities/Player.ts and src/scenes/Game.ts): In Player.ts createVisual(), add a health bar graphic (similar pattern to Teammate.ts updateHpBar). Draw it above the player character at y offset -(SIZES.PLAYER * 5). Update it in takeDamage(). In Game.ts, make enemies occasionally target the player: in the Game.update() loop where enemies are updated, pass the player as a potential target. In Enemy.ts getTarget(), add player to the potential targets pool with lower priority (25% chance an enemy targets the player instead of a teammate). Add player death handling: in Player.takeDamage(), if hp <= 0, emit a new EVENTS.PLAYER_DIED event. In Game.ts, listen for PLAYER_DIED and trigger game over.",
+
+    "STEP 10 - 4-MINUTE VICTORY + ENDLESS MODE (src/scenes/Game.ts): Replace the current triggerDayComplete() method. When dayTimer reaches 0: show a dramatic VICTORY overlay ('VICTORY! ENDLESS MODE UNLOCKED'). After 3 seconds, dismiss the overlay and transition into endless mode. Set isNight = true, change background to night, start spawning night waves (getNightWave). The game continues after victory - it does NOT end. Add a victoryAchieved boolean flag. In triggerGameOver, include whether victory was achieved in the data passed to GameOver scene. Update the GameOver scene to show 'VICTORY - ENDLESS MODE' stats if victory was achieved before death.",
+
+    "STEP 11 - ENEMY TARGETING PLAYER (src/entities/Enemy.ts): Modify the base Enemy.update() to accept a player parameter. In the getTarget method, accept player as an optional parameter. If player is provided and alive (hp > 0), include player in the targeting pool. For Grunts: 20% chance to target player. For Harassers: keep targeting lowest HP (which may be player). For Assassins: keep targeting shine target, fallback to nearest. Update Game.ts to pass player to enemy.update().",
+
+    "STEP 12 - UI UPDATES (src/scenes/UI.ts): Update the timer display for the new 4-minute match. After victory (listen for a new 'victory' event), change the timer text to show 'ENDLESS' in gold. Add player HP display: listen for EVENTS.PLAYER_DAMAGED and show a player health indicator (small bar or number near the ability bar). Update the cooldown values in trackCooldown() to use the new reduced cooldown values.",
+
+    "STEP 13 - GAME OVER SCENE UPDATE (src/scenes/GameOver.ts): Update to handle victory state. If data includes `victory: true`, show 'YOU SURVIVED' in gold instead of 'YOUR TEAM FELL' in red. Show time survived in endless mode. Show appropriate celebratory vs. defeat messaging.",
+
+    "STEP 14 - WAVE SYSTEM LULL TIMING (src/systems/WaveSystem.ts): Reduce the lull timer from 4000ms to 3000ms for tighter pacing. Also ensure the wave system properly handles the transition from day waves to night/endless waves after victory.",
+
+    "STEP 15 - READABILITY POLISH: In Game.ts resolveAbility('shield'), after calling target.receiveShield(), add a visual beam from player to target (like the heal beam but in shield color COLORS.SHIELD_PARTICLE). In Teammate.ts, when shield absorbs damage, spawn a small blue particle burst and show floating shield text like 'BLOCKED' in cyan. Ensure the persistent shield visual is visible and clear."
+  ],
+  "acceptance_criteria": [
+    "TypeScript compiles without errors (npx tsc --noEmit exits 0)",
+    "Vite build succeeds (npx vite build exits 0)",
+    "Shield ability applies a persistent shield value that actually blocks damage before HP loss",
+    "Intercept/Reflect deals damage to nearby enemies and grants shields to nearby allies",
+    "Dash moves the player toward the lowest-HP ally",
+    "Solo has 350 HP, ADC has 130 HP",
+    "Jungler performs visible dash-slash attacks periodically",
+    "Player has a visible health bar and can be damaged by enemies",
+    "Player death triggers game over",
+    "Victory triggers at 4:00 with clear messaging",
+    "Endless mode begins after victory with harder waves",
+    "Enemy damage/speed values are reduced for the first 4 minutes to feel winnable",
+    "Wave pacing fits within 4 minutes with 10-12 waves"
+  ],
+  "verification": [
+    "Run `cd /projects/sandbox/48hourchallenge && npx tsc --noEmit` - must exit 0",
+    "Run `cd /projects/sandbox/48hourchallenge && npx vite build` - must exit 0"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

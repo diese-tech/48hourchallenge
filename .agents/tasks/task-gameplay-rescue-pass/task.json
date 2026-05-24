@@ -1,0 +1,7 @@
+{
+  "task_id": "task-gameplay-rescue-pass",
+  "task_description": "Autonomous gameplay rescue pass for the frontend browser game challenge submission. Fix abilities, ally combat, add 4-minute win loop, player health/targeting, enemy balance, and readability to make the game feel playable, winnable, and satisfying.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002"],
+  "blocked_reason": null
+}
